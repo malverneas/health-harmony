@@ -1,0 +1,4 @@
+/* Custom app-specific styles */
+.safe-area-inset-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
