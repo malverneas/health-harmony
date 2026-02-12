@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { format, isToday, startOfWeek, endOfWeek } from "date-fns";
 import { useNavigate } from "react-router-dom";
+import { downloadAsCSV } from "@/utils/exportUtils";
+import { Download } from "lucide-react";
 
 interface Consultation {
   id: string;
@@ -41,7 +43,7 @@ export default function DoctorDashboard() {
 
   const fetchDashboardData = async () => {
     if (!user) return;
-    
+
     setIsLoading(true);
     try {
       // Fetch all consultations for this doctor
@@ -112,9 +114,55 @@ export default function DoctorDashboard() {
     }
   };
 
+  const handleExport = async () => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from('prescriptions')
+        .select(`
+          id,
+          created_at,
+          status,
+          patient_id
+        `)
+        .eq('doctor_id', user.id);
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        // Fetch patient names
+        const patientIds = [...new Set(data.map(p => p.patient_id))];
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, full_name')
+          .in('user_id', patientIds);
+
+        const profileMap = new Map(profiles?.map(p => [p.user_id, p.full_name]) || []);
+
+        const exportData = data.map(rx => ({
+          'Patient Name': profileMap.get(rx.patient_id) || 'Unknown',
+          'Date': format(new Date(rx.created_at!), 'PPP'),
+          'Status': rx.status.replace(/_/g, ' '),
+          'Prescription ID': rx.id
+        }));
+
+        downloadAsCSV(exportData, 'doctor_prescriptions_report');
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+    }
+  };
+
+
   return (
     <DashboardLayout title={`Hello, Dr. ${user?.fullName?.split(' ').pop()}!`} requiredRole="doctor">
       <div className="space-y-4 sm:space-y-6 pb-24 lg:pb-6">
+        <div className="flex justify-end">
+          <Button variant="outline" size="sm" className="gap-2" onClick={handleExport}>
+            <Download className="w-4 h-4" />
+            Export Data
+          </Button>
+        </div>
         {/* Stats Summary */}
         <div className="grid grid-cols-3 gap-3">
           <GlassCard className="p-3 sm:p-4 text-center">
@@ -152,12 +200,12 @@ export default function DoctorDashboard() {
           ) : (
             <div className="space-y-3">
               {todayConsultations.map((patient) => (
-                <div 
+                <div
                   key={patient.id}
                   className={cn(
                     "flex items-center gap-3 sm:gap-4 p-3 rounded-xl transition-all",
-                    patient.status === "in-progress" 
-                      ? "bg-primary/10 border border-primary/30" 
+                    patient.status === "in-progress"
+                      ? "bg-primary/10 border border-primary/30"
                       : "bg-muted/30"
                   )}
                 >
@@ -223,7 +271,7 @@ export default function DoctorDashboard() {
           </div>
         </GlassCard>
       </div>
-      
+
       <MobileNav />
     </DashboardLayout>
   );

@@ -4,6 +4,7 @@ import { GlassCard } from "@/components/layout/GlassCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SelectPharmacyDialog } from "@/components/prescription/SelectPharmacyDialog";
+import { FulfillmentSelectionDialog } from "@/components/prescription/FulfillmentSelectionDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { FileText, Download, Pill, Building, Loader2 } from "lucide-react";
@@ -25,6 +26,7 @@ interface Prescription {
   createdAt: Date;
   status: string;
   items: PrescriptionItem[];
+  pharmacyId: string | null;
 }
 
 const statusColors: Record<string, string> = {
@@ -43,6 +45,8 @@ export default function PrescriptionsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPrescriptionId, setSelectedPrescriptionId] = useState<string | null>(null);
   const [showPharmacyDialog, setShowPharmacyDialog] = useState(false);
+  const [showFulfillmentDialog, setShowFulfillmentDialog] = useState(false);
+  const [selectedPrescription, setSelectedPrescription] = useState<Prescription | null>(null);
   const { user } = useAuth();
 
   const fetchPrescriptions = async () => {
@@ -78,14 +82,14 @@ export default function PrescriptionsPage() {
       const pharmacyIds = prescriptionsData
         .map(p => p.pharmacy_id)
         .filter((id): id is string => id !== null);
-      
+
       let pharmacyMap = new Map<string, string>();
       if (pharmacyIds.length > 0) {
         const { data: pharmacies } = await supabase
           .from('pharmacies')
           .select('id, name')
           .in('id', pharmacyIds);
-        
+
         pharmacyMap = new Map(pharmacies?.map(p => [p.id, p.name]) || []);
       }
 
@@ -111,6 +115,7 @@ export default function PrescriptionsPage() {
         createdAt: new Date(p.created_at!),
         status: p.status,
         items: itemsMap.get(p.id) || [],
+        pharmacyId: p.pharmacy_id,
       }));
 
       setPrescriptions(formattedPrescriptions);
@@ -128,6 +133,11 @@ export default function PrescriptionsPage() {
   const handleSelectPharmacy = (prescriptionId: string) => {
     setSelectedPrescriptionId(prescriptionId);
     setShowPharmacyDialog(true);
+  };
+
+  const handleSelectFulfillment = (prescription: Prescription) => {
+    setSelectedPrescription(prescription);
+    setShowFulfillmentDialog(true);
   };
 
   const getStatusLabel = (status: string) => {
@@ -203,7 +213,7 @@ export default function PrescriptionsPage() {
                         <span>No pharmacy selected</span>
                       </div>
                     )}
-                    
+
                     <div className="flex gap-2">
                       {!prescription.pharmacyName && (
                         <Button
@@ -211,6 +221,14 @@ export default function PrescriptionsPage() {
                           onClick={() => handleSelectPharmacy(prescription.id)}
                         >
                           Select Pharmacy
+                        </Button>
+                      )}
+                      {prescription.status === 'in_stock' && (
+                        <Button
+                          size="sm"
+                          onClick={() => handleSelectFulfillment(prescription)}
+                        >
+                          Choose Pickup/Delivery
                         </Button>
                       )}
                       <Button variant="outline" size="sm" className="gap-2">
@@ -225,11 +243,13 @@ export default function PrescriptionsPage() {
           </div>
         )}
 
-        {selectedPrescriptionId && (
-          <SelectPharmacyDialog
-            open={showPharmacyDialog}
-            onOpenChange={setShowPharmacyDialog}
-            prescriptionId={selectedPrescriptionId}
+        {selectedPrescription && (
+          <FulfillmentSelectionDialog
+            open={showFulfillmentDialog}
+            onOpenChange={setShowFulfillmentDialog}
+            prescriptionId={selectedPrescription.id}
+            patientId={user?.id || ""}
+            pharmacyId={selectedPrescription.pharmacyId || ""}
             onSuccess={fetchPrescriptions}
           />
         )}

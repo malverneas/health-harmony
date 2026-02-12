@@ -121,6 +121,7 @@ export default function PatientDashboard() {
     const statusMap: Record<string, string> = {
       'sent': 'Sent to pharmacy',
       'acknowledged': 'Being processed',
+      'in_stock': 'Ready to choose pickup/delivery',
       'preparing': 'Preparing',
       'ready': 'Ready for pickup',
       'delivered': 'Delivered',

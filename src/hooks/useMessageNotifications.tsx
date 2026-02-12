@@ -74,13 +74,32 @@ export function useMessageNotifications() {
                 : "/pharmacy/messages";
 
             // Show toast notification
-            toast.info(`New message from ${senderName}`, {
-              description: messagePreview,
-              action: {
-                label: "View",
-                onClick: () => navigate(messagesPath)
-              },
-            });
+            const isSystemUpdate = newMessage.content.startsWith('[');
+            const title = isSystemUpdate
+              ? newMessage.content.split(']')[0].substring(1)
+              : `New message from ${senderName}`;
+
+            const displayContent = isSystemUpdate
+              ? newMessage.content.split(']')[1].trim()
+              : newMessage.content;
+
+            if (isSystemUpdate) {
+              toast.success(title, {
+                description: displayContent,
+                action: {
+                  label: "View",
+                  onClick: () => navigate(messagesPath)
+                },
+              });
+            } else {
+              toast.info(title, {
+                description: messagePreview,
+                action: {
+                  label: "View",
+                  onClick: () => navigate(messagesPath)
+                },
+              });
+            }
 
             // Show browser push notification if permitted
             if ("Notification" in window && notificationPermissionRef.current === "granted") {

@@ -134,7 +134,7 @@ export default function PharmacyPrescriptionsPage() {
 
   const updatePrescriptionStatus = async (prescriptionId: string, newStatus: string) => {
     if (!user) return;
-    
+
     setUpdatingId(prescriptionId);
     try {
       const { error } = await supabase
@@ -146,7 +146,7 @@ export default function PharmacyPrescriptionsPage() {
 
       // Find the prescription to get patient info
       const prescription = prescriptions.find(p => p.id === prescriptionId);
-      
+
       if (prescription) {
         // Get pharmacy name
         const { data: pharmacyData } = await supabase
@@ -165,16 +165,6 @@ export default function PharmacyPrescriptionsPage() {
           newStatus,
           pharmacyName
         );
-
-        // Create order when prescription is fulfilled/collected
-        if (newStatus === 'fulfilled') {
-          await createOrderFromPrescription(
-            prescriptionId,
-            prescription.patientId,
-            prescription.pharmacyId,
-            'pickup'
-          );
-        }
       }
 
       toast({

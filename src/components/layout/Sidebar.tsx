@@ -1,11 +1,11 @@
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { NavLink, useLocation } from "react-router-dom";
-import { 
-  LayoutDashboard, 
-  Calendar, 
-  FileText, 
-  MessageSquare, 
+import {
+  LayoutDashboard,
+  Calendar,
+  FileText,
+  MessageSquare,
   Pill,
   Users,
   BarChart3,
@@ -39,7 +39,7 @@ const roleNavItems = {
   admin: [
     { icon: LayoutDashboard, label: "Home", path: "/admin" },
     { icon: Users, label: "Users", path: "/admin/users" },
-    { icon: BarChart3, label: "Analytics", path: "/admin/analytics" },
+    { icon: BarChart3, label: "Reports", path: "/admin/analytics" },
     { icon: MessageSquare, label: "Logs", path: "/admin/logs" },
   ],
 };
@@ -61,14 +61,14 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     <>
       {/* Mobile overlay */}
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 lg:hidden"
           onClick={onClose}
         />
       )}
-      
+
       {/* Sidebar */}
-      <aside 
+      <aside
         className={cn(
           "fixed top-0 left-0 z-50 h-full w-64 glass-card border-r border-border/50 transition-transform duration-300 lg:translate-x-0",
           isOpen ? "translate-x-0" : "-translate-x-full"
@@ -99,8 +99,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   onClick={onClose}
                   className={cn(
                     "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200",
-                    isActive 
-                      ? "bg-primary/20 text-primary" 
+                    isActive
+                      ? "bg-primary/20 text-primary"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   )}
                 >
@@ -124,9 +124,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <p className="text-xs text-muted-foreground truncate">{user.email}</p>
               </div>
             </div>
-            
-            <Button 
-              variant="ghost" 
+
+            <Button
+              variant="ghost"
               className="w-full justify-start gap-3 text-muted-foreground hover:text-destructive text-sm"
               onClick={logout}
             >

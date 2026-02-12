@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#00ffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-stethoscope">
+  <path d="M4.8 2.3A.3.3 0 1 0 5 2a.3.3 0 0 0-.2.3Z"/>
+  <path d="M10 2v2"/>
+  <path d="M14 2v2"/>
+  <path d="M3 10v1a5 5 0 0 0 5 5v0a5 5 0 0 0 5-5v-1"/>
+  <path d="M12 21a5 5 0 0 0 5-5V4a2 2 0 0 1 2-2h1"/>
+  <path d="M7 2h1"/>
+  <path d="M7 5h1"/>
+  <path d="M7 8h1"/>
+  <path d="M3 2h1"/>
+  <path d="M3 5h1"/>
+  <path d="M3 8h1"/>
+  <circle cx="12" cy="19" r="2"/>
+</svg>

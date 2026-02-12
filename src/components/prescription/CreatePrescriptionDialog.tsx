@@ -38,11 +38,11 @@ const emptyMedication: MedicationItem = {
   instructions: ""
 };
 
-export function CreatePrescriptionDialog({ 
-  open, 
-  onOpenChange, 
+export function CreatePrescriptionDialog({
+  open,
+  onOpenChange,
   onSuccess,
-  preselectedPatientId 
+  preselectedPatientId
 }: CreatePrescriptionDialogProps) {
   const [step, setStep] = useState(1);
   const [selectedPatient, setSelectedPatient] = useState(preselectedPatientId || "");
@@ -115,12 +115,20 @@ export function CreatePrescriptionDialog({
 
     setIsLoading(true);
     try {
+      // Fetch the first pharmacy (single pharmacy system)
+      const { data: pharmacyData } = await supabase
+        .from('pharmacies')
+        .select('id')
+        .limit(1)
+        .single();
+
       // Create prescription
       const { data: prescription, error: prescriptionError } = await supabase
         .from('prescriptions')
         .insert({
           patient_id: selectedPatient,
           doctor_id: user.id,
+          pharmacy_id: pharmacyData?.id || null, // Auto-assign if exists
           notes,
           status: 'sent'
         })
@@ -242,7 +250,7 @@ export function CreatePrescriptionDialog({
                 Add
               </Button>
             </div>
-            
+
             <div className="space-y-4 max-h-[400px] overflow-y-auto">
               {medications.map((med, index) => (
                 <div key={index} className="p-4 rounded-xl border border-border bg-muted/20 space-y-3">

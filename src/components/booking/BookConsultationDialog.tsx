@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Video, MessageSquare, User, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { sendConsultationConfirmationEmail } from "@/utils/emailService";
 
 interface BookConsultationDialogProps {
   open: boolean;
@@ -180,6 +181,26 @@ export function BookConsultationDialog({ open, onOpenChange, onSuccess }: BookCo
 
       onOpenChange(false);
       onSuccess?.();
+
+      // Send confirmation email
+      const doctor = doctors.find(d => d.id === selectedDoctor);
+      if (user?.email && doctor) {
+        try {
+          await sendConsultationConfirmationEmail({
+            to_email: user.email,
+            to_name: user.fullName || 'Patient',
+            doctor_name: doctor.fullName,
+            consultation_type: consultationType,
+            scheduled_at: format(scheduledAt, 'PPp'),
+            reason: reason
+          });
+          console.log("Confirmation email sent successfully");
+        } catch (emailError) {
+          console.error("Failed to send confirmation email:", emailError);
+          // We don't toast error here because the booking itself was successful
+        }
+      }
+
       resetForm();
     } catch (error) {
       toast({

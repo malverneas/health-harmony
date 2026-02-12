@@ -6,8 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { CreatePrescriptionDialog } from "@/components/prescription/CreatePrescriptionDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { FileText, Plus, Loader2 } from "lucide-react";
+import { FileText, Plus, Loader2, Download } from "lucide-react";
 import { format } from "date-fns";
+import { downloadAsCSV } from "@/utils/exportUtils";
 
 interface Prescription {
   id: string;
@@ -36,7 +37,7 @@ export default function DoctorPrescriptionsPage() {
 
   const fetchPrescriptions = async () => {
     if (!user) return;
-    
+
     setIsLoading(true);
     try {
       const { data, error } = await supabase
@@ -95,15 +96,31 @@ export default function DoctorPrescriptionsPage() {
     fetchPrescriptions();
   }, [user]);
 
+  const handleExport = () => {
+    const exportData = prescriptions.map(rx => ({
+      'Patient Name': rx.patientName,
+      'Date Created': format(rx.createdAt, 'PPP'),
+      'Medications': rx.medicationCount,
+      'Status': rx.status.replace(/_/g, ' ')
+    }));
+    downloadAsCSV(exportData, 'doctor_prescriptions');
+  };
+
   return (
     <DashboardLayout requiredRole="doctor">
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">Prescriptions</h1>
-          <Button className="gap-2" onClick={() => setShowCreateDialog(true)}>
-            <Plus className="w-4 h-4" />
-            New
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" className="gap-2" onClick={handleExport} disabled={prescriptions.length === 0}>
+              <Download className="w-4 h-4" />
+              Download
+            </Button>
+            <Button className="gap-2" onClick={() => setShowCreateDialog(true)}>
+              <Plus className="w-4 h-4" />
+              New
+            </Button>
+          </div>
         </div>
 
         {isLoading ? (
