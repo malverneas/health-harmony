@@ -3,16 +3,19 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/layout/GlassCard";
-import { 
-  Stethoscope, 
-  Video, 
-  FileText, 
-  Shield, 
+import {
+  Stethoscope,
+  Video,
+  FileText,
+  Shield,
   ArrowRight,
   Sparkles,
   Clock,
-  Users
+  Users,
+  Moon,
+  Sun
 } from "lucide-react";
+import { useTheme } from "@/components/ThemeProvider";
 
 const features = [
   {
@@ -40,6 +43,7 @@ const features = [
 export default function Index() {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
+  const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -66,11 +70,22 @@ export default function Index() {
             </div>
             <span className="text-xl font-display font-bold gradient-text">MediConnect</span>
           </div>
-          
-          <Button onClick={() => navigate("/auth")} variant="neon" size="lg">
-            Get Started
-            <ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
+
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-300"
+            >
+              {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </Button>
+
+            <Button onClick={() => navigate("/auth")} variant="neon" size="lg">
+              Get Started
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </div>
         </nav>
       </header>
 
@@ -82,12 +97,12 @@ export default function Index() {
               <Sparkles className="w-4 h-4 text-primary" />
               <span className="text-sm font-medium text-primary">Next-gen Healthcare Platform</span>
             </div>
-            
+
             <h1 className="text-4xl lg:text-7xl font-display font-bold mb-6 animate-slide-up">
               Healthcare at Your
               <span className="block gradient-text neon-text">Fingertips</span>
             </h1>
-            
+
             <p className="text-lg lg:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto animate-slide-up" style={{ animationDelay: "0.2s" }}>
               Connect with doctors, manage prescriptions, and take control of your health journey with our comprehensive healthcare platform.
             </p>
@@ -121,7 +136,7 @@ export default function Index() {
           {/* Features */}
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-24">
             {features.map((feature, index) => (
-              <GlassCard 
+              <GlassCard
                 key={feature.title}
                 hover
                 className="p-6 animate-slide-up"

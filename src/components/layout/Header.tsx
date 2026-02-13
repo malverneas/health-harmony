@@ -2,7 +2,7 @@ import { Bell, Menu, Search, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
-import { useState } from "react";
+import { useTheme } from "@/components/ThemeProvider";
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -11,11 +11,10 @@ interface HeaderProps {
 
 export function Header({ onMenuClick, title }: HeaderProps) {
   const { user } = useAuth();
-  const [isDark, setIsDark] = useState(true);
+  const { theme, setTheme } = useTheme();
 
   const toggleTheme = () => {
-    setIsDark(!isDark);
-    document.documentElement.classList.toggle('light');
+    setTheme(theme === "dark" ? "light" : "dark");
   };
 
   return (
@@ -23,15 +22,15 @@ export function Header({ onMenuClick, title }: HeaderProps) {
       <div className="flex items-center justify-between gap-4">
         {/* Left section */}
         <div className="flex items-center gap-4">
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             className="lg:hidden"
             onClick={onMenuClick}
           >
             <Menu className="w-5 h-5" />
           </Button>
-          
+
           {title && (
             <h1 className="text-xl lg:text-2xl font-display font-bold hidden sm:block">
               {title}
@@ -43,8 +42,8 @@ export function Header({ onMenuClick, title }: HeaderProps) {
         <div className="hidden md:flex flex-1 max-w-md">
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input 
-              placeholder="Search..." 
+            <Input
+              placeholder="Search..."
               className="pl-10 bg-muted/30 border-transparent focus:border-primary/50"
             />
           </div>
@@ -53,9 +52,9 @@ export function Header({ onMenuClick, title }: HeaderProps) {
         {/* Right section */}
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" onClick={toggleTheme}>
-            {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </Button>
-          
+
           <Button variant="ghost" size="icon" className="relative">
             <Bell className="w-5 h-5" />
             <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full animate-pulse" />

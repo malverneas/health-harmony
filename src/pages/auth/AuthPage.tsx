@@ -5,27 +5,29 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { GlassCard } from "@/components/layout/GlassCard";
 import { UserRole } from "@/types";
-import { 
-  Stethoscope, 
-  User, 
-  Pill, 
-  Shield, 
-  Mail, 
-  Lock, 
+import {
+  Stethoscope,
+  User,
+  Pill,
+  Shield,
+  Mail,
+  Lock,
   ArrowRight,
   Eye,
   EyeOff,
   Loader2,
-  Building
+  Building,
+  Moon,
+  Sun
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useTheme } from "@/components/ThemeProvider";
 
 const roles: { id: UserRole; label: string; icon: typeof User; description: string }[] = [
   { id: "patient", label: "Patient", icon: User, description: "Book consultations & manage health" },
   { id: "doctor", label: "Doctor", icon: Stethoscope, description: "Manage patients & prescriptions" },
   { id: "pharmacist", label: "Pharmacist", icon: Pill, description: "Handle prescriptions & orders" },
-  { id: "admin", label: "Admin", icon: Shield, description: "System administration" },
 ];
 
 export default function AuthPage() {
@@ -40,8 +42,9 @@ export default function AuthPage() {
   const [specialty, setSpecialty] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const { login, register, isAuthenticated, user } = useAuth();
+  const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -64,10 +67,10 @@ export default function AuthPage() {
           description: "Redirecting to your dashboard...",
         });
       } else {
-        await register({ 
-          email, 
-          password, 
-          fullName, 
+        await register({
+          email,
+          password,
+          fullName,
           role: selectedRole,
           pharmacyName: selectedRole === 'pharmacist' ? pharmacyName : undefined,
           pharmacyAddress: selectedRole === 'pharmacist' ? pharmacyAddress : undefined,
@@ -96,6 +99,17 @@ export default function AuthPage() {
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl animate-float" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-secondary/20 rounded-full blur-3xl animate-float" style={{ animationDelay: "2s" }} />
+      </div>
+
+      <div className="fixed top-6 right-6 z-50">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          className="rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-300"
+        >
+          {theme === "dark" ? <Sun className="w-5 h-5 text-primary" /> : <Moon className="w-5 h-5 text-primary" />}
+        </Button>
       </div>
 
       <div className="relative z-10 w-full max-w-lg">

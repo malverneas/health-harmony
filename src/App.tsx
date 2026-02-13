@@ -40,58 +40,62 @@ import UsersPage from "./pages/admin/UsersPage";
 import AnalyticsPage from "./pages/admin/AnalyticsPage";
 import LogsPage from "./pages/admin/LogsPage";
 
+import { ThemeProvider } from "@/components/ThemeProvider";
+
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <CallProvider>
-          <Toaster />
-          <Sonner />
-          <GlobalCallManager />
-          <BrowserRouter>
-            <NotificationProvider>
-              <Routes>
-                {/* ... existing routes ... */}
-                <Route path="/" element={<Index />} />
-                <Route path="/auth" element={<AuthPage />} />
+    <ThemeProvider defaultTheme="dark">
+      <AuthProvider>
+        <TooltipProvider>
+          <CallProvider>
+            <Toaster />
+            <Sonner />
+            <GlobalCallManager />
+            <BrowserRouter>
+              <NotificationProvider>
+                <Routes>
+                  {/* ... existing routes ... */}
+                  <Route path="/" element={<Index />} />
+                  <Route path="/auth" element={<AuthPage />} />
 
-                {/* Patient routes */}
-                <Route path="/patient" element={<PatientDashboard />} />
-                <Route path="/patient/consultations" element={<ConsultationsPage />} />
-                <Route path="/patient/prescriptions" element={<PrescriptionsPage />} />
-                <Route path="/patient/orders" element={<OrdersPage />} />
-                <Route path="/patient/messages" element={<MessagesPage />} />
+                  {/* Patient routes */}
+                  <Route path="/patient" element={<PatientDashboard />} />
+                  <Route path="/patient/consultations" element={<ConsultationsPage />} />
+                  <Route path="/patient/prescriptions" element={<PrescriptionsPage />} />
+                  <Route path="/patient/orders" element={<OrdersPage />} />
+                  <Route path="/patient/messages" element={<MessagesPage />} />
 
-                {/* Doctor routes */}
-                <Route path="/doctor" element={<DoctorDashboard />} />
-                <Route path="/doctor/schedule" element={<SchedulePage />} />
-                <Route path="/doctor/patients" element={<PatientsPage />} />
-                <Route path="/doctor/prescriptions" element={<DoctorPrescriptionsPage />} />
-                <Route path="/doctor/messages" element={<DoctorMessagesPage />} />
+                  {/* Doctor routes */}
+                  <Route path="/doctor" element={<DoctorDashboard />} />
+                  <Route path="/doctor/schedule" element={<SchedulePage />} />
+                  <Route path="/doctor/patients" element={<PatientsPage />} />
+                  <Route path="/doctor/prescriptions" element={<DoctorPrescriptionsPage />} />
+                  <Route path="/doctor/messages" element={<DoctorMessagesPage />} />
 
-                {/* Pharmacy routes */}
-                <Route path="/pharmacy" element={<PharmacyDashboard />} />
-                <Route path="/pharmacy/prescriptions" element={<PharmacyPrescriptionsPage />} />
-                <Route path="/pharmacy/inventory" element={<InventoryPage />} />
-                <Route path="/pharmacy/orders" element={<PharmacyOrdersPage />} />
-                <Route path="/pharmacy/messages" element={<PharmacyMessagesPage />} />
+                  {/* Pharmacy routes */}
+                  <Route path="/pharmacy" element={<PharmacyDashboard />} />
+                  <Route path="/pharmacy/prescriptions" element={<PharmacyPrescriptionsPage />} />
+                  <Route path="/pharmacy/inventory" element={<InventoryPage />} />
+                  <Route path="/pharmacy/orders" element={<PharmacyOrdersPage />} />
+                  <Route path="/pharmacy/messages" element={<PharmacyMessagesPage />} />
 
-                {/* Admin routes */}
-                <Route path="/admin" element={<AdminDashboard />} />
-                <Route path="/admin/users" element={<UsersPage />} />
-                <Route path="/admin/analytics" element={<AnalyticsPage />} />
-                <Route path="/admin/logs" element={<LogsPage />} />
+                  {/* Admin routes */}
+                  <Route path="/admin" element={<AdminDashboard />} />
+                  <Route path="/admin/users" element={<UsersPage />} />
+                  <Route path="/admin/analytics" element={<AnalyticsPage />} />
+                  <Route path="/admin/logs" element={<LogsPage />} />
 
-                {/* Catch-all */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </NotificationProvider>
-          </BrowserRouter>
-        </CallProvider>
-      </TooltipProvider>
-    </AuthProvider>
+                  {/* Catch-all */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </NotificationProvider>
+            </BrowserRouter>
+          </CallProvider>
+        </TooltipProvider>
+      </AuthProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 
