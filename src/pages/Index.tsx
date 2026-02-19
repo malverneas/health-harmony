@@ -11,7 +11,6 @@ import {
   ArrowRight,
   Sparkles,
   Clock,
-  Users,
   Moon,
   Sun
 } from "lucide-react";
@@ -102,35 +101,6 @@ export default function Index() {
               Healthcare at Your
               <span className="block gradient-text neon-text">Fingertips</span>
             </h1>
-
-            <p className="text-lg lg:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto animate-slide-up" style={{ animationDelay: "0.2s" }}>
-              Connect with doctors, manage prescriptions, and take control of your health journey with our comprehensive healthcare platform.
-            </p>
-
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-slide-up" style={{ animationDelay: "0.4s" }}>
-              <Button onClick={() => navigate("/auth")} size="xl" className="w-full sm:w-auto">
-                Start Now — It's Free
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </Button>
-              <Button variant="outline" size="xl" className="w-full sm:w-auto">
-                Watch Demo
-              </Button>
-            </div>
-
-            {/* Stats */}
-            <div className="flex flex-wrap items-center justify-center gap-8 lg:gap-16 mt-16 animate-fade-in" style={{ animationDelay: "0.6s" }}>
-              {[
-                { value: "10K+", label: "Active Patients" },
-                { value: "500+", label: "Verified Doctors" },
-                { value: "50K+", label: "Consultations" },
-                { value: "4.9★", label: "User Rating" },
-              ].map((stat) => (
-                <div key={stat.label} className="text-center">
-                  <p className="text-3xl lg:text-4xl font-display font-bold gradient-text">{stat.value}</p>
-                  <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
-                </div>
-              ))}
-            </div>
           </div>
 
           {/* Features */}
@@ -150,32 +120,12 @@ export default function Index() {
               </GlassCard>
             ))}
           </div>
-
-          {/* CTA */}
-          <div className="mt-24 text-center">
-            <GlassCard className="p-8 lg:p-12 max-w-3xl mx-auto neon-border animate-fade-in">
-              <div className="flex items-center justify-center gap-2 mb-4">
-                <Users className="w-6 h-6 text-primary" />
-                <span className="text-sm font-medium text-primary">Join thousands of users</span>
-              </div>
-              <h2 className="text-2xl lg:text-4xl font-display font-bold mb-4">
-                Ready to transform your healthcare experience?
-              </h2>
-              <p className="text-muted-foreground mb-8">
-                Sign up now and get access to video consultations, digital prescriptions, and more.
-              </p>
-              <Button onClick={() => navigate("/auth")} size="xl">
-                Create Free Account
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </Button>
-            </GlassCard>
-          </div>
         </div>
       </main>
 
       {/* Footer */}
       <footer className="relative z-10 p-6 text-center text-muted-foreground text-sm">
-        <p>© 2024 MediConnect. Built with ❤️ for better healthcare.</p>
+        <p>© 2026 MediConnect. Built with ❤️ for better healthcare.</p>
       </footer>
     </div>
   );
