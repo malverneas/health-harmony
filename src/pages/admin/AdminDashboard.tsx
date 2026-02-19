@@ -36,30 +36,25 @@ export default function AdminDashboard() {
   const fetchAdminStats = async () => {
     setIsLoading(true);
     try {
-      // Robust count fetch function
-      const fetchCount = async (table: any, filter?: any) => {
-        let query = supabase.from(table).select('*', { count: 'exact', head: true });
-        if (filter) query = query.eq(filter.column, filter.value);
-
-        const { count, error } = await query;
-        if (error) {
-          console.error(`Error counting ${table}:`, error);
-          return 0;
-        }
-        return count || 0;
-      };
-
-      const [userCount, doctorCount, pharmacyCount] = await Promise.all([
-        fetchCount('profiles'),
-        fetchCount('user_roles', { column: 'role', value: 'doctor' }),
-        fetchCount('pharmacies')
+      const [
+        { count: userCount, error: e1 },
+        { count: doctorCount, error: e2 },
+        { count: pharmacyCount, error: e3 }
+      ] = await Promise.all([
+        supabase.from('profiles').select('*', { count: 'exact', head: true }),
+        supabase.from('user_roles').select('*', { count: 'exact', head: true }).eq('role', 'doctor'),
+        supabase.from('pharmacies').select('*', { count: 'exact', head: true })
       ]);
+
+      if (e1) console.error('Error counting profiles:', e1);
+      if (e2) console.error('Error counting doctors:', e2);
+      if (e3) console.error('Error counting pharmacies:', e3);
 
       setStats(prev => ({
         ...prev,
-        totalUsers: userCount,
-        doctors: doctorCount,
-        pharmacies: pharmacyCount
+        totalUsers: userCount || 0,
+        doctors: doctorCount || 0,
+        pharmacies: pharmacyCount || 0
       }));
 
       // 2. Fetch Recent Activities
