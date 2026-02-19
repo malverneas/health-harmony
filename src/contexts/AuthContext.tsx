@@ -38,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchUserData = async (userId: string) => {
+  const fetchUserData = async (userId: string, attempts = 3) => {
     try {
       // Fetch profile
       const { data: profile } = await supabase
@@ -61,9 +61,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           fullName: profile.full_name,
           role: roleData.role as UserRole,
         });
+        setIsLoading(false);
+      } else if (attempts > 0) {
+        // Retry if data not found (could be trigger lag)
+        console.log(`Retrying fetchUserData... attempts remaining: ${attempts}`);
+        setTimeout(() => {
+          fetchUserData(userId, attempts - 1);
+        }, 500);
+      } else {
+        setIsLoading(false);
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
+      if (attempts > 0) {
+        setTimeout(() => {
+          fetchUserData(userId, attempts - 1);
+        }, 500);
+      } else {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -72,7 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
-        
+
         if (session?.user) {
           // Defer Supabase calls with setTimeout
           setTimeout(() => {
@@ -90,8 +106,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session);
       if (session?.user) {
         fetchUserData(session.user.id);
+      } else {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     });
 
     return () => subscription.unsubscribe();
@@ -142,14 +159,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider 
-      value={{ 
-        user, 
+    <AuthContext.Provider
+      value={{
+        user,
         session,
-        isLoading, 
+        isLoading,
         isAuthenticated: !!user,
-        login, 
-        register, 
+        login,
+        register,
         logout,
       }}
     >

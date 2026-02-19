@@ -66,6 +66,8 @@ export default function AuthPage() {
           title: "Welcome back!",
           description: "Redirecting to your dashboard...",
         });
+        // We don't set isLoading(false) here because we're waiting for the 
+        // AuthContext to update and the useEffect to navigate
       } else {
         await register({
           email,
@@ -81,6 +83,7 @@ export default function AuthPage() {
           title: "Account created!",
           description: "Redirecting to your dashboard...",
         });
+        // Same here - stay in loading state until redirection
       }
     } catch (error) {
       toast({
@@ -88,7 +91,6 @@ export default function AuthPage() {
         description: error instanceof Error ? error.message : "Something went wrong",
         variant: "destructive",
       });
-    } finally {
       setIsLoading(false);
     }
   };
