@@ -199,21 +199,77 @@ export function VideoCallDialog({
 
     try {
       console.log("Initializing media...");
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true
-      });
 
-      localStreamRef.current = stream;
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = stream;
+      // Check if mediaDevices API is available (requires HTTPS or localhost)
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        toast.error(
+          "Video calls require a secure connection (HTTPS). Please access the app via HTTPS or localhost.",
+          { duration: 8000 }
+        );
+        onOpenChange(false);
+        return;
       }
-      setIsMediaReady(true);
-      console.log("Media ready.");
 
-    } catch (error) {
+      // Try video + audio first
+      let stream: MediaStream | null = null;
+
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true
+        });
+        console.log("Got video + audio stream");
+      } catch (err: any) {
+        console.warn("Could not get video+audio, trying audio only:", err.name);
+
+        // Fallback: audio only
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: false,
+            audio: true
+          });
+          setIsVideoEnabled(false);
+          toast.info("Camera unavailable — joining with audio only");
+          console.log("Got audio-only stream");
+        } catch (err2: any) {
+          console.warn("Could not get audio either, trying video only:", err2.name);
+
+          // Fallback: video only
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: true,
+              audio: false
+            });
+            setIsAudioEnabled(false);
+            toast.info("Microphone unavailable — joining with video only");
+            console.log("Got video-only stream");
+          } catch (err3: any) {
+            console.error("No media available at all:", err3.name);
+            throw err3;
+          }
+        }
+      }
+
+      if (stream) {
+        localStreamRef.current = stream;
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = stream;
+        }
+        setIsMediaReady(true);
+        console.log("Media ready.");
+      }
+
+    } catch (error: any) {
       console.error('Error accessing media:', error);
-      toast.error("Failed to access camera/microphone");
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        toast.error("Camera/microphone permission denied. Please allow access in your browser settings and try again.");
+      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        toast.error("No camera or microphone found. Please connect a device and try again.");
+      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+        toast.error("Camera/microphone is already in use by another application. Please close it and try again.");
+      } else {
+        toast.error("Failed to access camera/microphone. Please check your device permissions.");
+      }
       onOpenChange(false);
     }
   }, [user, onOpenChange]);

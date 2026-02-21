@@ -49,26 +49,30 @@ export default function AuthPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (isAuthenticated && user) {
+    console.log("Auth State Check:", { isAuthenticated, role: user?.role });
+    if (isAuthenticated && user?.role) {
       const route = user.role === 'pharmacist' ? '/pharmacy' : `/${user.role}`;
+      console.log("Redirecting to:", route);
       navigate(route, { replace: true });
     }
   }, [isAuthenticated, user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("[AuthPage] Form submitted. isLogin:", isLogin);
     setIsLoading(true);
 
     try {
       if (isLogin) {
+        console.log("[AuthPage] Attempting login for:", email);
         await login(email, password);
+        console.log("[AuthPage] Login call successful");
         toast({
           title: "Welcome back!",
-          description: "Redirecting to your dashboard...",
+          description: "Fetching your profile...",
         });
-        // We don't set isLoading(false) here because we're waiting for the 
-        // AuthContext to update and the useEffect to navigate
       } else {
+        console.log("[AuthPage] Attempting registration for:", email);
         await register({
           email,
           password,
@@ -79,13 +83,24 @@ export default function AuthPage() {
           licenseNumber: selectedRole === 'doctor' ? licenseNumber : undefined,
           specialty: selectedRole === 'doctor' ? specialty : undefined,
         });
+        console.log("[AuthPage] Registration call successful");
         toast({
           title: "Account created!",
-          description: "Redirecting to your dashboard...",
+          description: "Setting up your profile...",
         });
-        // Same here - stay in loading state until redirection
       }
+
+      console.log("[AuthPage] Waiting for redirection via AuthContext updates...");
+      // Safety timeout: if after 15 seconds we haven't redirected, reset loading
+      setTimeout(() => {
+        if (isLoading) {
+          console.warn("[AuthPage] Redirect timeout reached. Resetting loading state.");
+          setIsLoading(false);
+        }
+      }, 15000);
+
     } catch (error) {
+      console.error("[AuthPage] Auth error:", error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Something went wrong",

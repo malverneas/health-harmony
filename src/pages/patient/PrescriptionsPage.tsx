@@ -3,11 +3,10 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { GlassCard } from "@/components/layout/GlassCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { SelectPharmacyDialog } from "@/components/prescription/SelectPharmacyDialog";
 import { FulfillmentSelectionDialog } from "@/components/prescription/FulfillmentSelectionDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { FileText, Download, Pill, Building, Loader2 } from "lucide-react";
+import { FileText, Download, Pill, Building, Loader2, Package } from "lucide-react";
 import { format } from "date-fns";
 
 interface PrescriptionItem {
@@ -30,6 +29,7 @@ interface Prescription {
 }
 
 const statusColors: Record<string, string> = {
+  pending_patient: "bg-amber-500/20 text-amber-400",
   sent: "bg-blue-500/20 text-blue-400",
   acknowledged: "bg-yellow-500/20 text-yellow-400",
   in_stock: "bg-green-500/20 text-green-400",
@@ -40,11 +40,13 @@ const statusColors: Record<string, string> = {
   fulfilled: "bg-green-500/20 text-green-400",
 };
 
+const statusLabels: Record<string, string> = {
+  pending_patient: "Action Required",
+};
+
 export default function PrescriptionsPage() {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedPrescriptionId, setSelectedPrescriptionId] = useState<string | null>(null);
-  const [showPharmacyDialog, setShowPharmacyDialog] = useState(false);
   const [showFulfillmentDialog, setShowFulfillmentDialog] = useState(false);
   const [selectedPrescription, setSelectedPrescription] = useState<Prescription | null>(null);
   const { user } = useAuth();
@@ -130,18 +132,13 @@ export default function PrescriptionsPage() {
     fetchPrescriptions();
   }, [user]);
 
-  const handleSelectPharmacy = (prescriptionId: string) => {
-    setSelectedPrescriptionId(prescriptionId);
-    setShowPharmacyDialog(true);
-  };
-
   const handleSelectFulfillment = (prescription: Prescription) => {
     setSelectedPrescription(prescription);
     setShowFulfillmentDialog(true);
   };
 
   const getStatusLabel = (status: string) => {
-    return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    return statusLabels[status] || status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
   return (
@@ -200,35 +197,33 @@ export default function PrescriptionsPage() {
                     </div>
                   )}
 
-                  {/* Pharmacy info or select button */}
+                  {/* Status-specific actions */}
                   <div className="flex items-center justify-between border-t border-border pt-4">
-                    {prescription.pharmacyName ? (
+                    {prescription.status === 'pending_patient' ? (
+                      <div className="flex items-center gap-2 text-sm text-amber-400">
+                        <Package className="w-4 h-4" />
+                        <span>Please choose how you'd like to receive your medicine</span>
+                      </div>
+                    ) : prescription.pharmacyName ? (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Building className="w-4 h-4" />
-                        <span>Sent to: <span className="text-foreground font-medium">{prescription.pharmacyName}</span></span>
+                        <span>Pharmacy: <span className="text-foreground font-medium">{prescription.pharmacyName}</span></span>
                       </div>
                     ) : (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Building className="w-4 h-4" />
-                        <span>No pharmacy selected</span>
+                        <span>Pending pharmacy assignment</span>
                       </div>
                     )}
 
                     <div className="flex gap-2">
-                      {!prescription.pharmacyName && (
-                        <Button
-                          size="sm"
-                          onClick={() => handleSelectPharmacy(prescription.id)}
-                        >
-                          Select Pharmacy
-                        </Button>
-                      )}
-                      {prescription.status === 'in_stock' && (
+                      {prescription.status === 'pending_patient' && (
                         <Button
                           size="sm"
                           onClick={() => handleSelectFulfillment(prescription)}
+                          className="animate-pulse"
                         >
-                          Choose Pickup/Delivery
+                          Choose Pickup or Delivery
                         </Button>
                       )}
                       <Button variant="outline" size="sm" className="gap-2">
@@ -249,7 +244,6 @@ export default function PrescriptionsPage() {
             onOpenChange={setShowFulfillmentDialog}
             prescriptionId={selectedPrescription.id}
             patientId={user?.id || ""}
-            pharmacyId={selectedPrescription.pharmacyId || ""}
             onSuccess={fetchPrescriptions}
           />
         )}

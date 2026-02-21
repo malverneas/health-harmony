@@ -7,14 +7,12 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Package, MapPin, Loader2 } from "lucide-react";
-import { sendPharmacyNotification } from "@/utils/pharmacyNotifications";
 
 interface FulfillmentSelectionDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     prescriptionId: string;
     patientId: string;
-    pharmacyId: string;
     onSuccess?: () => void;
 }
 
@@ -23,7 +21,6 @@ export function FulfillmentSelectionDialog({
     onOpenChange,
     prescriptionId,
     patientId,
-    pharmacyId,
     onSuccess
 }: FulfillmentSelectionDialogProps) {
     const [type, setType] = useState<"pickup" | "delivery">("pickup");
@@ -32,7 +29,7 @@ export function FulfillmentSelectionDialog({
     const { toast } = useToast();
 
     const handleConfirm = async () => {
-        if (type === "delivery" && !address) {
+        if (type === "delivery" && !address.trim()) {
             toast({
                 title: "Address Required",
                 description: "Please enter a delivery address.",
@@ -43,34 +40,35 @@ export function FulfillmentSelectionDialog({
 
         setIsLoading(true);
         try {
-            // 1. Create the order
-            const { error: orderError } = await supabase
-                .from('orders')
-                .insert({
-                    prescription_id: prescriptionId,
-                    patient_id: patientId,
-                    pharmacy_id: pharmacyId,
-                    delivery_type: type,
-                    delivery_address: type === "delivery" ? address : null,
-                    status: 'pending'
-                });
+            // 1. Get the single pharmacy
+            const { data: pharmacyData } = await supabase
+                .from('pharmacies')
+                .select('id')
+                .limit(1)
+                .single();
 
-            if (orderError) throw orderError;
+            if (!pharmacyData) {
+                throw new Error('No pharmacy found in the system');
+            }
 
-            // 2. Update prescription status
+            // 2. Update the prescription with fulfillment info, assign pharmacy, and change status
             const { error: rxError } = await supabase
                 .from('prescriptions')
-                .update({ status: 'preparing' })
+                .update({
+                    fulfillment_type: type,
+                    delivery_address: type === "delivery" ? address.trim() : null,
+                    pharmacy_id: pharmacyData.id,
+                    status: 'sent'
+                })
                 .eq('id', prescriptionId);
 
             if (rxError) throw rxError;
 
-            // 3. Notify the pharmacy (triggers sound/toast for them)
-            await sendPharmacyNotification(patientId, pharmacyId, type, type === "delivery" ? address : null);
-
             toast({
-                title: "Order Confirmed",
-                description: `Your ${type} order has been placed. The pharmacy is now preparing it.`,
+                title: type === "pickup" ? "Pickup Selected" : "Delivery Selected",
+                description: type === "pickup"
+                    ? "Your prescription has been sent to the pharmacy for pickup."
+                    : `Your prescription will be delivered to: ${address.trim()}`,
             });
 
             onOpenChange(false);
@@ -100,20 +98,20 @@ export function FulfillmentSelectionDialog({
                             <RadioGroupItem value="pickup" id="pickup" className="peer sr-only" />
                             <Label
                                 htmlFor="pickup"
-                                className="flex flex-col items-center justify-between rounded-xl border-2 border-muted bg-muted/30 p-4 hover:bg-muted/50 peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
+                                className="flex flex-col items-center justify-between rounded-xl border-2 border-muted bg-muted/30 p-4 hover:bg-muted/50 peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
                             >
                                 <Package className="mb-3 h-6 w-6 text-primary" />
-                                <span className="text-sm font-medium">Pickup</span>
+                                <span className="text-sm font-medium">Collect at Store</span>
                             </Label>
                         </div>
                         <div>
                             <RadioGroupItem value="delivery" id="delivery" className="peer sr-only" />
                             <Label
                                 htmlFor="delivery"
-                                className="flex flex-col items-center justify-between rounded-xl border-2 border-muted bg-muted/30 p-4 hover:bg-muted/50 peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
+                                className="flex flex-col items-center justify-between rounded-xl border-2 border-muted bg-muted/30 p-4 hover:bg-muted/50 peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
                             >
                                 <MapPin className="mb-3 h-6 w-6 text-primary" />
-                                <span className="text-sm font-medium">Delivery</span>
+                                <span className="text-sm font-medium">Deliver to Me</span>
                             </Label>
                         </div>
                     </RadioGroup>
@@ -140,7 +138,7 @@ export function FulfillmentSelectionDialog({
                     {isLoading ? (
                         <Loader2 className="w-4 h-4 animate-spin mr-2" />
                     ) : null}
-                    Confirm Order
+                    Confirm & Send to Pharmacy
                 </Button>
             </DialogContent>
         </Dialog>

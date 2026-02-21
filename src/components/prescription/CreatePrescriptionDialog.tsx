@@ -67,28 +67,58 @@ export function CreatePrescriptionDialog({
   const fetchPatients = async () => {
     setIsFetching(true);
     try {
-      const { data: patientRoles } = await supabase
+      // Try RPC first (SECURITY DEFINER, bypasses RLS)
+      const { data: rpcPatients, error: rpcError } = await supabase
+        .rpc('get_available_patients');
+
+      if (!rpcError && rpcPatients && rpcPatients.length > 0) {
+        console.log('[CreatePrescription] Found patients via RPC:', rpcPatients.length);
+        setPatients(rpcPatients.map((p: any) => ({
+          id: p.id,
+          fullName: p.full_name,
+          email: p.email
+        })));
+        return;
+      }
+
+      if (rpcError) {
+        console.warn('[CreatePrescription] RPC not available, falling back:', rpcError.message);
+      }
+
+      // Fallback: direct table queries
+      const { data: patientRoles, error: rolesError } = await supabase
         .from('user_roles')
         .select('user_id')
         .eq('role', 'patient');
 
+      if (rolesError) {
+        console.error('[CreatePrescription] Error fetching patient roles:', rolesError);
+      }
+
       if (patientRoles && patientRoles.length > 0) {
         const patientIds = patientRoles.map(r => r.user_id);
-        const { data: profiles } = await supabase
+        const { data: profiles, error: profilesError } = await supabase
           .from('profiles')
           .select('user_id, full_name, email')
           .in('user_id', patientIds);
 
+        if (profilesError) {
+          console.error('[CreatePrescription] Error fetching patient profiles:', profilesError);
+        }
+
         if (profiles) {
+          console.log('[CreatePrescription] Found patients via direct query:', profiles.length);
           setPatients(profiles.map(p => ({
             id: p.user_id,
             fullName: p.full_name,
             email: p.email
           })));
         }
+      } else {
+        console.warn('[CreatePrescription] No patient roles found.');
       }
     } catch (error) {
-      console.error('Error fetching patients:', error);
+      console.error('[CreatePrescription] Error fetching patients:', error);
     } finally {
       setIsFetching(false);
     }
@@ -115,22 +145,16 @@ export function CreatePrescriptionDialog({
 
     setIsLoading(true);
     try {
-      // Fetch the first pharmacy (single pharmacy system)
-      const { data: pharmacyData } = await supabase
-        .from('pharmacies')
-        .select('id')
-        .limit(1)
-        .single();
-
-      // Create prescription
+      // Create prescription with status 'pending_patient'
+      // The patient will choose pickup/delivery before it goes to the pharmacy
       const { data: prescription, error: prescriptionError } = await supabase
         .from('prescriptions')
         .insert({
           patient_id: selectedPatient,
           doctor_id: user.id,
-          pharmacy_id: pharmacyData?.id || null, // Auto-assign if exists
+          pharmacy_id: null,
           notes,
-          status: 'sent'
+          status: 'pending_patient'
         })
         .select()
         .single();

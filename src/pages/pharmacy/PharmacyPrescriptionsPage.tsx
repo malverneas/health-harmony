@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Check, X, Loader2, Pill } from "lucide-react";
+import { FileText, Check, X, Loader2, Pill, Package, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import { sendPrescriptionStatusNotification, createOrderFromPrescription } from "@/utils/pharmacyNotifications";
 
@@ -28,6 +28,8 @@ interface Prescription {
   status: string;
   items: PrescriptionItem[];
   pharmacyId: string;
+  fulfillmentType: string | null;
+  deliveryAddress: string | null;
 }
 
 const statusColors: Record<string, string> = {
@@ -70,8 +72,9 @@ export default function PharmacyPrescriptionsPage() {
       // Fetch prescriptions assigned to this pharmacy
       const { data: prescriptionsData, error: prescriptionsError } = await supabase
         .from('prescriptions')
-        .select('id, patient_id, doctor_id, status, created_at')
+        .select('id, patient_id, doctor_id, status, created_at, fulfillment_type, delivery_address')
         .eq('pharmacy_id', pharmacyData.id)
+        .neq('status', 'pending_patient')
         .order('created_at', { ascending: false });
 
       if (prescriptionsError) throw prescriptionsError;
@@ -118,6 +121,8 @@ export default function PharmacyPrescriptionsPage() {
         status: p.status,
         items: itemsMap.get(p.id) || [],
         pharmacyId: pharmacyData.id,
+        fulfillmentType: p.fulfillment_type,
+        deliveryAddress: p.delivery_address,
       }));
 
       setPrescriptions(formattedPrescriptions);
@@ -254,6 +259,28 @@ export default function PharmacyPrescriptionsPage() {
                           </div>
                         </div>
                       ))}
+                    </div>
+                  )}
+
+                  {/* Fulfillment Info */}
+                  {rx.fulfillmentType && (
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border">
+                      {rx.fulfillmentType === 'pickup' ? (
+                        <>
+                          <Package className="w-5 h-5 text-blue-400" />
+                          <span className="text-sm font-medium">Collect at Store</span>
+                        </>
+                      ) : (
+                        <>
+                          <MapPin className="w-5 h-5 text-purple-400" />
+                          <div>
+                            <span className="text-sm font-medium">Delivery</span>
+                            {rx.deliveryAddress && (
+                              <p className="text-xs text-muted-foreground mt-0.5">{rx.deliveryAddress}</p>
+                            )}
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
 

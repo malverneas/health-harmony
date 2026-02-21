@@ -69,28 +69,58 @@ export function BookConsultationDialog({ open, onOpenChange, onSuccess }: BookCo
   const fetchDoctors = async () => {
     setIsFetching(true);
     try {
-      const { data: doctorRoles } = await supabase
+      // Try the RPC function first (SECURITY DEFINER, bypasses RLS)
+      const { data: rpcDoctors, error: rpcError } = await supabase
+        .rpc('get_available_doctors');
+
+      if (!rpcError && rpcDoctors && rpcDoctors.length > 0) {
+        console.log('[BookConsultation] Found doctors via RPC:', rpcDoctors.length);
+        setDoctors(rpcDoctors.map((d: any) => ({
+          id: d.id,
+          fullName: d.full_name,
+          specialty: d.specialty || 'General Medicine'
+        })));
+        return;
+      }
+
+      if (rpcError) {
+        console.warn('[BookConsultation] RPC not available, falling back to direct query:', rpcError.message);
+      }
+
+      // Fallback: direct table queries (requires correct RLS policies)
+      const { data: doctorRoles, error: rolesError } = await supabase
         .from('user_roles')
         .select('user_id')
         .eq('role', 'doctor');
 
+      if (rolesError) {
+        console.error('[BookConsultation] Error fetching doctor roles:', rolesError);
+      }
+
       if (doctorRoles && doctorRoles.length > 0) {
         const doctorIds = doctorRoles.map(r => r.user_id);
-        const { data: profiles } = await supabase
+        const { data: profiles, error: profilesError } = await supabase
           .from('profiles')
           .select('user_id, full_name, specialty')
           .in('user_id', doctorIds);
 
+        if (profilesError) {
+          console.error('[BookConsultation] Error fetching doctor profiles:', profilesError);
+        }
+
         if (profiles) {
+          console.log('[BookConsultation] Found doctors via direct query:', profiles.length);
           setDoctors(profiles.map(p => ({
             id: p.user_id,
             fullName: p.full_name,
             specialty: p.specialty || 'General Medicine'
           })));
         }
+      } else {
+        console.warn('[BookConsultation] No doctor roles found. Check RLS policies or that doctors are registered.');
       }
     } catch (error) {
-      console.error('Error fetching doctors:', error);
+      console.error('[BookConsultation] Error fetching doctors:', error);
     } finally {
       setIsFetching(false);
     }
@@ -149,16 +179,43 @@ export function BookConsultationDialog({ open, onOpenChange, onSuccess }: BookCo
       const [hours, minutes] = selectedTime.split(':');
       scheduledAt.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 
-      const { error } = await supabase.from('consultations').insert({
+      const payload = {
         patient_id: user.id,
         doctor_id: selectedDoctor,
         consultation_type: consultationType,
         scheduled_at: scheduledAt.toISOString(),
         reason,
         status: 'scheduled'
-      });
+      };
 
-      if (error) throw error;
+      console.log('[BookConsultation] Attempting to insert consultation:', payload);
+
+      // Check current session
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('[BookConsultation] Current session user:', session?.user?.id, 'matches patient_id:', session?.user?.id === user.id);
+
+      // Try RPC first (SECURITY DEFINER, bypasses RLS)
+      const { data: rpcResult, error: rpcError } = await supabase
+        .rpc('book_consultation', {
+          p_patient_id: user.id,
+          p_doctor_id: selectedDoctor,
+          p_consultation_type: consultationType,
+          p_scheduled_at: scheduledAt.toISOString(),
+          p_reason: reason || null,
+          p_status: 'scheduled'
+        });
+
+      if (rpcError) {
+        console.warn('[BookConsultation] RPC failed, trying direct insert:', rpcError.message);
+        // Fallback to direct insert
+        const { error: insertError } = await supabase.from('consultations').insert(payload);
+        if (insertError) {
+          console.error('[BookConsultation] Direct INSERT also failed:', JSON.stringify(insertError, null, 2));
+          throw insertError;
+        }
+      } else {
+        console.log('[BookConsultation] Consultation created via RPC, id:', rpcResult);
+      }
 
       // Broadcast to doctor
       const channel = supabase.channel(`doctor-notifications-${selectedDoctor}`);
