@@ -87,7 +87,7 @@ export default function ConsultationsPage() {
           id: c.id,
           doctorId: c.doctor_id,
           doctorName: profileMap.get(c.doctor_id)?.full_name || 'Unknown Doctor',
-          specialty: profileMap.get(c.doctor_id)?.specialty || 'General Medicine',
+          specialty: profileMap.get(c.doctor_id)?.specialty || '',
           scheduledAt: new Date(c.scheduled_at),
           type: c.consultation_type,
           status: c.status,

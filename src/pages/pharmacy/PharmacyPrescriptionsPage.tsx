@@ -90,12 +90,24 @@ export default function PharmacyPrescriptionsPage() {
       const doctorIds = [...new Set(prescriptionsData.map(p => p.doctor_id))];
       const allUserIds = [...new Set([...patientIds, ...doctorIds])];
 
-      const { data: profiles } = await supabase
+      let profileMap = new Map<string, string>();
+
+      // Try direct profiles query first
+      const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('user_id, full_name')
         .in('user_id', allUserIds);
 
-      const profileMap = new Map(profiles?.map(p => [p.user_id, p.full_name]) || []);
+      if (!profilesError && profiles) {
+        profileMap = new Map(profiles.map(p => [p.user_id, p.full_name]));
+      } else {
+        console.warn('Could not fetch profiles directly, trying RPC fallback');
+        // Fallback: use RPC to get patient names
+        const { data: rpcPatients } = await supabase.rpc('get_available_patients');
+        if (rpcPatients) {
+          rpcPatients.forEach((p: any) => profileMap.set(p.id, p.full_name));
+        }
+      }
 
       // Fetch prescription items
       const prescriptionIds = prescriptionsData.map(p => p.id);

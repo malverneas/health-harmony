@@ -78,7 +78,7 @@ export function BookConsultationDialog({ open, onOpenChange, onSuccess }: BookCo
         setDoctors(rpcDoctors.map((d: any) => ({
           id: d.id,
           fullName: d.full_name,
-          specialty: d.specialty || 'General Medicine'
+          specialty: d.specialty || ''
         })));
         return;
       }
@@ -113,7 +113,7 @@ export function BookConsultationDialog({ open, onOpenChange, onSuccess }: BookCo
           setDoctors(profiles.map(p => ({
             id: p.user_id,
             fullName: p.full_name,
-            specialty: p.specialty || 'General Medicine'
+            specialty: p.specialty || ''
           })));
         }
       } else {

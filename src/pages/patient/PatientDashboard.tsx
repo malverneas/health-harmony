@@ -67,7 +67,7 @@ export default function PatientDashboard() {
         setUpcomingConsultation({
           id: consultation.id,
           doctorName: doctorProfile?.full_name || 'Unknown Doctor',
-          specialty: doctorProfile?.specialty || 'General Medicine',
+          specialty: doctorProfile?.specialty || '',
           scheduledAt: new Date(consultation.scheduled_at),
           type: consultation.consultation_type,
           status: consultation.status

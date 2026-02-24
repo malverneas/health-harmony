@@ -85,7 +85,7 @@ export default function MessagesPage() {
               return {
                 id: p.user_id,
                 fullName: p.full_name,
-                specialty: p.specialty || 'General Medicine',
+                specialty: p.specialty || '',
                 unreadCount: count || 0,
                 lastMessage: lastMsg?.content,
               };

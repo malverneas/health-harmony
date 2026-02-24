@@ -29,6 +29,7 @@ interface RegisterData {
   pharmacyAddress?: string;
   licenseNumber?: string;
   specialty?: string;
+  membershipNumber?: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -203,6 +204,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           address: data.pharmacyAddress,
           license_number: data.licenseNumber,
           specialty: data.specialty,
+          membership_number: data.membershipNumber,
         },
       },
     });

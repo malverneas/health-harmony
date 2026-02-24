@@ -18,7 +18,8 @@ import {
   Loader2,
   Building,
   Moon,
-  Sun
+  Sun,
+  Hash
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -40,6 +41,7 @@ export default function AuthPage() {
   const [pharmacyAddress, setPharmacyAddress] = useState("");
   const [licenseNumber, setLicenseNumber] = useState("");
   const [specialty, setSpecialty] = useState("");
+  const [membershipNumber, setMembershipNumber] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -82,6 +84,7 @@ export default function AuthPage() {
           pharmacyAddress: selectedRole === 'pharmacist' ? pharmacyAddress : undefined,
           licenseNumber: selectedRole === 'doctor' ? licenseNumber : undefined,
           specialty: selectedRole === 'doctor' ? specialty : undefined,
+          membershipNumber: selectedRole === 'patient' ? membershipNumber : undefined,
         });
         console.log("[AuthPage] Registration call successful");
         toast({
@@ -204,6 +207,22 @@ export default function AuthPage() {
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     required={!isLogin}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Patient specific fields */}
+            {!isLogin && selectedRole === 'patient' && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Membership Number</label>
+                <div className="relative">
+                  <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="MEM-12345"
+                    className="pl-10"
+                    value={membershipNumber}
+                    onChange={(e) => setMembershipNumber(e.target.value)}
                   />
                 </div>
               </div>
