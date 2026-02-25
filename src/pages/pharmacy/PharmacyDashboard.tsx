@@ -205,7 +205,7 @@ export default function PharmacyDashboard() {
   };
 
   return (
-    <DashboardLayout title={`${user?.fullName?.split(' ')[0]}'s Pharmacy`} requiredRole="pharmacist">
+    <DashboardLayout title="Pharmacy Dashboard" requiredRole="pharmacist">
       <div className="space-y-4 sm:space-y-6 pb-24 lg:pb-6">
         <div className="flex justify-end">
           <Button variant="outline" size="sm" className="gap-2" onClick={handleExport} disabled={isExporting}>

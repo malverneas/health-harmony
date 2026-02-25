@@ -4,8 +4,17 @@ import { GlassCard } from "@/components/layout/GlassCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { User, Search, MoreHorizontal, Loader2, ShieldAlert } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { User, Search, Trash2, Loader2, ShieldAlert } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface UserData {
   id: string;
@@ -33,6 +42,9 @@ export default function UsersPage() {
   const [filteredUsers, setFilteredUsers] = useState<UserData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [deleteUser, setDeleteUser] = useState<UserData | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { toast } = useToast();
 
   const fetchUsers = async () => {
     setIsLoading(true);
@@ -56,7 +68,7 @@ export default function UsersPage() {
         name: p.full_name || 'Unknown',
         email: p.email,
         role: roleMap.get(p.user_id) || 'patient',
-        status: 'active' // Status isn't in DB yet, defaulting to active
+        status: 'active'
       })) || [];
 
       setUsers(userData);
@@ -65,6 +77,36 @@ export default function UsersPage() {
       console.error('Error fetching users:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!deleteUser) return;
+    setIsDeleting(true);
+    try {
+      // Call the admin_delete_user RPC
+      const { error } = await supabase.rpc('admin_delete_user', {
+        target_user_id: deleteUser.id,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "User deleted",
+        description: `${deleteUser.name} has been removed from the system.`,
+      });
+
+      setDeleteUser(null);
+      fetchUsers();
+    } catch (error: any) {
+      console.error('Error deleting user:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete user. Check RPC is set up.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -130,9 +172,16 @@ export default function UsersPage() {
                   <div className="flex items-center gap-2">
                     <Badge className={roleColors[user.role] || "bg-muted text-muted-foreground"}>{user.role}</Badge>
                     <Badge className={statusColors[user.status]}>{user.status}</Badge>
-                    <Button variant="ghost" size="icon">
-                      <MoreHorizontal className="w-4 h-4" />
-                    </Button>
+                    {user.role !== 'admin' && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => setDeleteUser(user)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               </GlassCard>
@@ -140,6 +189,28 @@ export default function UsersPage() {
           </div>
         )}
       </div>
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={!!deleteUser} onOpenChange={(open) => !open && setDeleteUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete User</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to permanently delete <strong>{deleteUser?.name}</strong> ({deleteUser?.email})?
+              This action cannot be undone. All their data will be removed.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDeleteUser(null)} disabled={isDeleting}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteUser} disabled={isDeleting}>
+              {isDeleting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
+              Delete User
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

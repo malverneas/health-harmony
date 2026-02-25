@@ -1,4 +1,4 @@
-import { Bell, Menu, Search, Moon, Sun } from "lucide-react";
+import { Menu, Search, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
@@ -55,10 +55,6 @@ export function Header({ onMenuClick, title }: HeaderProps) {
             {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </Button>
 
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full animate-pulse" />
-          </Button>
 
           {/* Mobile user avatar */}
           <div className="lg:hidden w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center">

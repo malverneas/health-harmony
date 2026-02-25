@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { FulfillmentSelectionDialog } from "@/components/prescription/FulfillmentSelectionDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { FileText, Download, Pill, Building, Loader2, Package } from "lucide-react";
+import { FileText, Download, Pill, Building, Loader2, Package, Eye } from "lucide-react";
 import { format } from "date-fns";
 
 interface PrescriptionItem {
@@ -141,6 +141,73 @@ export default function PrescriptionsPage() {
     return statusLabels[status] || status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
+  const handleViewPDF = (prescription: Prescription) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const medicationsHtml = prescription.items.map(item => `
+      <tr>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${item.medication_name}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${item.dosage}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${item.frequency}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${item.duration}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${item.instructions || '—'}</td>
+      </tr>
+    `).join('');
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html><head><title>Prescription - ${format(prescription.createdAt, 'PPP')}</title>
+      <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #1a1a1a; max-width: 800px; margin: 0 auto; }
+        .header { text-align: center; border-bottom: 3px solid #2563eb; padding-bottom: 20px; margin-bottom: 30px; }
+        .header h1 { color: #2563eb; margin: 0 0 5px 0; font-size: 28px; }
+        .header p { color: #6b7280; margin: 2px 0; font-size: 14px; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
+        .info-box { background: #f9fafb; padding: 15px; border-radius: 8px; }
+        .info-box label { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
+        .info-box p { margin: 4px 0 0; font-weight: 600; font-size: 15px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { background: #2563eb; color: white; padding: 10px; text-align: left; font-size: 13px; }
+        td { font-size: 14px; }
+        .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #9ca3af; font-size: 12px; }
+        @media print { body { padding: 20px; } }
+      </style></head><body>
+        <div class="header">
+          <h1>MediConnect</h1>
+          <p>Healthcare Platform — Prescription</p>
+        </div>
+        <div class="info-grid">
+          <div class="info-box">
+            <label>Patient</label>
+            <p>${user?.fullName || 'Patient'}</p>
+          </div>
+          <div class="info-box">
+            <label>Prescribing Doctor</label>
+            <p>Dr. ${prescription.doctorName}</p>
+          </div>
+          <div class="info-box">
+            <label>Date Issued</label>
+            <p>${format(prescription.createdAt, 'PPP')}</p>
+          </div>
+          <div class="info-box">
+            <label>Status</label>
+            <p>${getStatusLabel(prescription.status)}</p>
+          </div>
+        </div>
+        <h3 style="margin-bottom: 5px;">Medications</h3>
+        <table>
+          <thead><tr>
+            <th>Medication</th><th>Dosage</th><th>Frequency</th><th>Duration</th><th>Instructions</th>
+          </tr></thead>
+          <tbody>${medicationsHtml}</tbody>
+        </table>
+        <div class="footer">This prescription was generated via MediConnect. For questions, contact your healthcare provider.</div>
+      </body></html>
+    `);
+    printWindow.document.close();
+  };
+
   return (
     <DashboardLayout requiredRole="patient">
       <div className="space-y-6">
@@ -226,9 +293,14 @@ export default function PrescriptionsPage() {
                           Choose Pickup or Delivery
                         </Button>
                       )}
-                      <Button variant="outline" size="sm" className="gap-2">
-                        <Download className="w-4 h-4" />
-                        PDF
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                        onClick={() => handleViewPDF(prescription)}
+                      >
+                        <Eye className="w-4 h-4" />
+                        View PDF
                       </Button>
                     </div>
                   </div>
