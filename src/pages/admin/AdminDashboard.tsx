@@ -36,25 +36,38 @@ export default function AdminDashboard() {
   const fetchAdminStats = async () => {
     setIsLoading(true);
     try {
-      const [
-        { count: userCount, error: e1 },
-        { count: doctorCount, error: e2 },
-        { count: pharmacyCount, error: e3 }
-      ] = await Promise.all([
-        supabase.from('profiles').select('*', { count: 'exact', head: true }),
-        supabase.from('user_roles').select('*', { count: 'exact', head: true }).eq('role', 'doctor'),
-        supabase.from('pharmacies').select('*', { count: 'exact', head: true })
-      ]);
+      // Try SECURITY DEFINER RPC first (bypasses RLS)
+      const { data: rpcData, error: rpcError } = await (supabase.rpc as any)('get_admin_analytics');
 
-      if (e1) console.error('Error counting profiles:', e1);
-      if (e2) console.error('Error counting doctors:', e2);
-      if (e3) console.error('Error counting pharmacies:', e3);
+      let userCount = 0;
+      let doctorCount = 0;
+      let pharmacyCount = 0;
+
+      if (!rpcError && rpcData) {
+        userCount = rpcData.total_users || 0;
+        doctorCount = (rpcData.roles || []).filter((r: any) => r.role === 'doctor').length;
+        pharmacyCount = (rpcData.roles || []).filter((r: any) => r.role === 'pharmacist').length;
+      } else {
+        // Fallback to direct queries
+        const [
+          { count: uc },
+          { count: dc },
+          { count: pc }
+        ] = await Promise.all([
+          supabase.from('profiles').select('*', { count: 'exact', head: true }),
+          supabase.from('user_roles').select('*', { count: 'exact', head: true }).eq('role', 'doctor'),
+          supabase.from('pharmacies').select('*', { count: 'exact', head: true })
+        ]);
+        userCount = uc || 0;
+        doctorCount = dc || 0;
+        pharmacyCount = pc || 0;
+      }
 
       setStats(prev => ({
         ...prev,
-        totalUsers: userCount || 0,
-        doctors: doctorCount || 0,
-        pharmacies: pharmacyCount || 0
+        totalUsers: userCount,
+        doctors: doctorCount,
+        pharmacies: pharmacyCount
       }));
 
       // 2. Fetch Recent Activities

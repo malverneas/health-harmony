@@ -36,10 +36,8 @@ import {
   Legend,
   AreaChart,
   Area,
-  RadialBarChart,
-  RadialBar,
 } from "recharts";
-import { format, subDays, startOfDay, parseISO } from "date-fns";
+import { format, subDays, startOfDay } from "date-fns";
 import { downloadAsCSV } from "@/utils/exportUtils";
 
 interface AnalyticsData {
@@ -100,6 +98,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 export default function AnalyticsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -109,156 +108,153 @@ export default function AnalyticsPage() {
   const handleExport = async () => {
     if (!data) return;
     try {
-      const [
-        { data: consultations },
-        { data: prescriptions },
-        { data: orders }
-      ] = await Promise.all([
-        supabase.from('consultations').select('scheduled_at, consultation_type, status, patient_id, doctor_id'),
-        supabase.from('prescriptions').select('id, created_at, status, patient_id, doctor_id'),
-        supabase.from('orders').select('id, created_at, status, delivery_type, patient_id')
-      ]);
-
-      const allUserIds = [...new Set([
-        ...(consultations?.map(c => c.patient_id) || []),
-        ...(consultations?.map(c => c.doctor_id) || []),
-        ...(prescriptions?.map(p => p.patient_id) || []),
-        ...(prescriptions?.map(p => p.doctor_id) || []),
-        ...(orders?.map(o => o.patient_id) || [])
-      ])];
-
-      const { data: profiles } = await supabase.from('profiles').select('user_id, full_name').in('user_id', allUserIds);
-      const profileMap = new Map(profiles?.map(p => [p.user_id, p.full_name]) || []);
-
       const exportData = [
         { Section: '--- SUMMARY ---', Details: '' },
         { Section: 'Total Users', Details: data.totalUsers },
         { Section: 'Total Consultations', Details: data.totalConsultations },
         { Section: 'Total Prescriptions', Details: data.totalPrescriptions },
         { Section: 'Total Orders', Details: data.totalOrders },
-        { Section: '', Details: '' },
-        { Section: '--- CONSULTATIONS ---', Details: '' },
-        ...(consultations?.slice(0, 50).map(c => ({
-          Section: profileMap.get(c.patient_id) || 'Unknown Patient',
-          Details: `${c.consultation_type} with ${profileMap.get(c.doctor_id) || 'Doctor'} on ${format(new Date(c.scheduled_at), 'PP')}`
-        })) || []),
-        { Section: '', Details: '' },
-        { Section: '--- ORDERS ---', Details: '' },
-        ...(orders?.slice(0, 50).map(o => ({
-          Section: profileMap.get(o.patient_id) || 'Unknown',
-          Details: `${o.delivery_type} (${o.status}) on ${format(new Date(o.created_at!), 'PP')}`
-        })) || [])
       ];
-
       downloadAsCSV(exportData, 'system_analytics_report');
-    } catch (error) {
-      console.error('Export error:', error);
+    } catch (err) {
+      console.error('Export error:', err);
     }
   };
 
   const fetchAnalytics = async () => {
     setIsLoading(true);
+    setError(null);
     try {
-      // 1. Total counts
-      const [
-        { count: userCount },
-        { count: consultationCount },
-        { count: prescriptionCount },
-        { count: orderCount }
-      ] = await Promise.all([
-        supabase.from('profiles').select('*', { count: 'exact', head: true }),
-        supabase.from('consultations').select('*', { count: 'exact', head: true }),
-        supabase.from('prescriptions').select('*', { count: 'exact', head: true }),
-        supabase.from('orders').select('*', { count: 'exact', head: true })
-      ]);
+      // Try the SECURITY DEFINER RPC first (bypasses RLS)
+      const { data: rpcData, error: rpcError } = await (supabase.rpc as any)('get_admin_analytics');
 
-      // 2. User growth (last 30 days)
-      const { data: allProfiles } = await supabase
-        .from('profiles')
-        .select('created_at')
-        .order('created_at', { ascending: true });
+      let allConsultations: any[] = [];
+      let allPrescriptions: any[] = [];
+      let allOrders: any[] = [];
+      let allMedItems: any[] = [];
+      let allRoles: any[] = [];
+      let allProfiles: any[] = [];
+      let totalUsers = 0;
+      let totalConsultations = 0;
+      let totalPrescriptions = 0;
+      let totalOrders = 0;
 
+      if (!rpcError && rpcData) {
+        // RPC succeeded — use its data
+        totalUsers = rpcData.total_users || 0;
+        totalConsultations = rpcData.total_consultations || 0;
+        totalPrescriptions = rpcData.total_prescriptions || 0;
+        totalOrders = rpcData.total_orders || 0;
+        allConsultations = rpcData.consultations || [];
+        allPrescriptions = rpcData.prescriptions || [];
+        allOrders = rpcData.orders || [];
+        allMedItems = rpcData.prescription_items || [];
+        allRoles = rpcData.roles || [];
+        allProfiles = rpcData.profiles || [];
+      } else {
+        // Fallback: direct queries (depends on RLS)
+        console.warn('RPC failed, falling back to direct queries:', rpcError);
+        const [
+          { count: uc },
+          { count: cc },
+          { count: pc },
+          { count: oc }
+        ] = await Promise.all([
+          supabase.from('profiles').select('*', { count: 'exact', head: true }),
+          supabase.from('consultations').select('*', { count: 'exact', head: true }),
+          supabase.from('prescriptions').select('*', { count: 'exact', head: true }),
+          supabase.from('orders').select('*', { count: 'exact', head: true })
+        ]);
+        totalUsers = uc || 0;
+        totalConsultations = cc || 0;
+        totalPrescriptions = pc || 0;
+        totalOrders = oc || 0;
+
+        const [
+          { data: c },
+          { data: p },
+          { data: o },
+          { data: m },
+          { data: r },
+          { data: pr }
+        ] = await Promise.all([
+          supabase.from('consultations').select('*').order('scheduled_at', { ascending: false }).limit(200),
+          supabase.from('prescriptions').select('*').order('created_at', { ascending: false }).limit(200),
+          supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(200),
+          supabase.from('prescription_items').select('medication_name'),
+          supabase.from('user_roles').select('user_id, role'),
+          supabase.from('profiles').select('user_id, full_name, created_at').order('created_at', { ascending: true })
+        ]);
+        allConsultations = c || [];
+        allPrescriptions = p || [];
+        allOrders = o || [];
+        allMedItems = m || [];
+        allRoles = r || [];
+        allProfiles = pr || [];
+      }
+
+      // Process: User Growth (30 days)
       const last30Days = Array.from({ length: 30 }, (_, i) => {
         const date = subDays(new Date(), 29 - i);
         return { date: format(date, 'MMM dd'), rawDate: startOfDay(date), users: 0, cumulative: 0 };
       });
 
       let cumulative = 0;
-      // Count users that signed up before our window
-      allProfiles?.forEach(p => {
+      allProfiles.forEach((p: any) => {
         if (p.created_at) {
           const pDate = startOfDay(new Date(p.created_at));
-          if (pDate < last30Days[0].rawDate) {
-            cumulative++;
-          }
+          if (pDate < last30Days[0].rawDate) cumulative++;
         }
       });
-
       last30Days.forEach(day => {
-        const count = allProfiles?.filter(p => {
+        const count = allProfiles.filter((p: any) => {
           if (!p.created_at) return false;
-          const pDate = startOfDay(new Date(p.created_at));
-          return pDate.getTime() === day.rawDate.getTime();
-        }).length || 0;
+          return startOfDay(new Date(p.created_at)).getTime() === day.rawDate.getTime();
+        }).length;
         day.users = count;
         cumulative += count;
         day.cumulative = cumulative;
       });
 
-      // 3. Consultation trends (last 14 days)
-      const { data: allConsultations } = await supabase
-        .from('consultations')
-        .select('scheduled_at, consultation_type, status, patient_id')
-        .order('scheduled_at', { ascending: false });
-
+      // Process: Consultation Trends (14 days)
       const last14Days = Array.from({ length: 14 }, (_, i) => {
         const date = subDays(new Date(), 13 - i);
         return { date: format(date, 'MMM dd'), rawDate: startOfDay(date), count: 0 };
       });
-
-      allConsultations?.forEach(c => {
+      allConsultations.forEach((c: any) => {
         const cDate = startOfDay(new Date(c.scheduled_at));
         const day = last14Days.find(d => d.rawDate.getTime() === cDate.getTime());
         if (day) day.count++;
       });
 
-      // 4. Consultation types
-      const typeCounts = (allConsultations || []).reduce((acc: Record<string, number>, c) => {
-        const type = c.consultation_type || 'Unknown';
-        const label = type.charAt(0).toUpperCase() + type.slice(1);
+      // Process: Consultation Types
+      const typeCounts = allConsultations.reduce((acc: Record<string, number>, c: any) => {
+        const label = (c.consultation_type || 'Unknown').replace(/^\w/, (l: string) => l.toUpperCase());
         acc[label] = (acc[label] || 0) + 1;
         return acc;
       }, {});
       const consultationTypes = Object.entries(typeCounts).map(([name, value]) => ({ name, value }));
 
-      // 5. Prescription statuses
-      const { data: allPrescriptions } = await supabase
-        .from('prescriptions')
-        .select('status, created_at');
-
-      const statusCounts = (allPrescriptions || []).reduce((acc: Record<string, number>, p) => {
+      // Process: Prescription Statuses
+      const statusCounts = allPrescriptions.reduce((acc: Record<string, number>, p: any) => {
         const label = STATUS_LABELS[p.status] || p.status;
         acc[label] = (acc[label] || 0) + 1;
         return acc;
       }, {});
       const prescriptionStatuses = Object.entries(statusCounts).map(([name, value]) => ({ name, value }));
 
-      // 6. Role distribution
-      const { data: roles } = await supabase.from('user_roles').select('role');
-      const roleCounts = (roles || []).reduce((acc: Record<string, number>, r) => {
+      // Process: Role Distribution
+      const roleCounts = allRoles.reduce((acc: Record<string, number>, r: any) => {
         const label = r.role.charAt(0).toUpperCase() + r.role.slice(1);
         acc[label] = (acc[label] || 0) + 1;
         return acc;
       }, {});
       const roleDistribution = Object.entries(roleCounts).map(([name, value]) => ({
-        name,
-        value,
-        fill: ROLE_COLORS[name] || '#8884d8',
+        name, value, fill: ROLE_COLORS[name] || '#8884d8',
       }));
 
-      // 7. Top medications
-      const { data: medItems } = await supabase.from('prescription_items').select('medication_name');
-      const medCounts = (medItems || []).reduce((acc: Record<string, number>, m) => {
+      // Process: Top Medications
+      const medCounts = allMedItems.reduce((acc: Record<string, number>, m: any) => {
         acc[m.medication_name] = (acc[m.medication_name] || 0) + 1;
         return acc;
       }, {});
@@ -267,89 +263,60 @@ export default function AnalyticsPage() {
         .sort((a, b) => b.count - a.count)
         .slice(0, 8);
 
-      // 8. Fulfillment (orders by delivery_type)
-      const { data: orderData } = await supabase.from('orders').select('delivery_type, status, created_at');
-      const fulfillCounts = (orderData || []).reduce((acc: Record<string, number>, o) => {
-        const type = (o.delivery_type || 'unknown').charAt(0).toUpperCase() + (o.delivery_type || 'unknown').slice(1);
+      // Process: Fulfillment
+      const fulfillCounts = allOrders.reduce((acc: Record<string, number>, o: any) => {
+        const type = (o.delivery_type || 'unknown').replace(/^\w/, (l: string) => l.toUpperCase());
         acc[type] = (acc[type] || 0) + 1;
         return acc;
       }, {});
       const fulfillmentData = Object.entries(fulfillCounts).map(([name, value]) => ({ name, value }));
 
-      // 9. Order statuses
-      const orderStatusCounts = (orderData || []).reduce((acc: Record<string, number>, o) => {
-        const label = o.status.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
+      // Process: Order Statuses
+      const osCounts = allOrders.reduce((acc: Record<string, number>, o: any) => {
+        const label = (o.status || '').replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
         acc[label] = (acc[label] || 0) + 1;
         return acc;
       }, {});
-      const orderStatusData = Object.entries(orderStatusCounts).map(([name, value]) => ({ name, value }));
+      const orderStatusData = Object.entries(osCounts).map(([name, value]) => ({ name, value }));
 
-      // 10. Recent activity
-      const patientIds = [...new Set(allConsultations?.slice(0, 10).map(c => c.patient_id) || [])];
-      let profileMap = new Map();
-      if (patientIds.length > 0) {
-        const { data: profiles } = await supabase.from('profiles').select('user_id, full_name').in('user_id', patientIds);
-        profileMap = new Map(profiles?.map(p => [p.user_id, p.full_name]) || []);
-      }
-
-      const recentActivity = allConsultations?.slice(0, 8).map(c => ({
-        id: Math.random().toString(),
+      // Process: Recent Activity
+      const patientIds = [...new Set(allConsultations.slice(0, 10).map((c: any) => c.patient_id))];
+      const profileMap = new Map(allProfiles.map((p: any) => [p.user_id, p.full_name]));
+      const recentActivity = allConsultations.slice(0, 8).map((c: any) => ({
+        id: c.id || Math.random().toString(),
         patient: profileMap.get(c.patient_id) || 'Unknown',
         type: c.consultation_type,
         status: c.status,
         time: format(new Date(c.scheduled_at), 'PP p')
-      })) || [];
+      }));
 
-      // 11. Weekly comparison
+      // Process: Weekly Comparison
       const thisWeekStart = subDays(new Date(), 7);
       const lastWeekStart = subDays(new Date(), 14);
-
-      const thisWeekConsultations = allConsultations?.filter(c => new Date(c.scheduled_at) >= thisWeekStart).length || 0;
-      const lastWeekConsultations = allConsultations?.filter(c => {
-        const d = new Date(c.scheduled_at);
-        return d >= lastWeekStart && d < thisWeekStart;
-      }).length || 0;
-
-      const thisWeekPrescriptions = allPrescriptions?.filter(p => p.created_at && new Date(p.created_at) >= thisWeekStart).length || 0;
-      const lastWeekPrescriptions = allPrescriptions?.filter(p => {
-        if (!p.created_at) return false;
-        const d = new Date(p.created_at);
-        return d >= lastWeekStart && d < thisWeekStart;
-      }).length || 0;
-
-      const thisWeekOrders = orderData?.filter(o => o.created_at && new Date(o.created_at) >= thisWeekStart).length || 0;
-      const lastWeekOrders = orderData?.filter(o => {
-        if (!o.created_at) return false;
-        const d = new Date(o.created_at);
-        return d >= lastWeekStart && d < thisWeekStart;
-      }).length || 0;
-
       const calcChange = (curr: number, prev: number) => prev === 0 ? (curr > 0 ? 100 : 0) : Math.round(((curr - prev) / prev) * 100);
 
+      const twConsult = allConsultations.filter((c: any) => new Date(c.scheduled_at) >= thisWeekStart).length;
+      const lwConsult = allConsultations.filter((c: any) => { const d = new Date(c.scheduled_at); return d >= lastWeekStart && d < thisWeekStart; }).length;
+      const twPresc = allPrescriptions.filter((p: any) => p.created_at && new Date(p.created_at) >= thisWeekStart).length;
+      const lwPresc = allPrescriptions.filter((p: any) => { if (!p.created_at) return false; const d = new Date(p.created_at); return d >= lastWeekStart && d < thisWeekStart; }).length;
+      const twOrders = allOrders.filter((o: any) => o.created_at && new Date(o.created_at) >= thisWeekStart).length;
+      const lwOrders = allOrders.filter((o: any) => { if (!o.created_at) return false; const d = new Date(o.created_at); return d >= lastWeekStart && d < thisWeekStart; }).length;
+
       const weeklyComparison = [
-        { metric: 'Consultations', thisWeek: thisWeekConsultations, lastWeek: lastWeekConsultations, change: calcChange(thisWeekConsultations, lastWeekConsultations) },
-        { metric: 'Prescriptions', thisWeek: thisWeekPrescriptions, lastWeek: lastWeekPrescriptions, change: calcChange(thisWeekPrescriptions, lastWeekPrescriptions) },
-        { metric: 'Orders', thisWeek: thisWeekOrders, lastWeek: lastWeekOrders, change: calcChange(thisWeekOrders, lastWeekOrders) },
+        { metric: 'Consultations', thisWeek: twConsult, lastWeek: lwConsult, change: calcChange(twConsult, lwConsult) },
+        { metric: 'Prescriptions', thisWeek: twPresc, lastWeek: lwPresc, change: calcChange(twPresc, lwPresc) },
+        { metric: 'Orders', thisWeek: twOrders, lastWeek: lwOrders, change: calcChange(twOrders, lwOrders) },
       ];
 
       setData({
-        totalUsers: userCount || 0,
-        totalConsultations: consultationCount || 0,
-        totalPrescriptions: prescriptionCount || 0,
-        totalOrders: orderCount || 0,
-        userGrowth: last30Days,
-        consultationTrend: last14Days,
-        consultationTypes,
-        prescriptionStatuses,
-        roleDistribution,
-        topMedications,
-        fulfillmentData,
-        recentActivity,
-        orderStatusData,
-        weeklyComparison,
+        totalUsers, totalConsultations, totalPrescriptions, totalOrders,
+        userGrowth: last30Days, consultationTrend: last14Days,
+        consultationTypes, prescriptionStatuses, roleDistribution,
+        topMedications, fulfillmentData, recentActivity, orderStatusData, weeklyComparison,
       });
-    } catch (error) {
-      console.error('Analytics error:', error);
+    } catch (err: any) {
+      console.error('Analytics error:', err);
+      setError(err.message || 'Failed to load analytics');
     } finally {
       setIsLoading(false);
     }
@@ -386,6 +353,12 @@ export default function AnalyticsPage() {
             </Button>
           </div>
         </div>
+
+        {error && (
+          <GlassCard className="p-4 border-red-500/50 bg-red-500/5">
+            <p className="text-sm text-red-400">{error}</p>
+          </GlassCard>
+        )}
 
         {/* KPI Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -440,7 +413,6 @@ export default function AnalyticsPage() {
 
         {/* Row 1: User Growth + Consultation Trends */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* User Growth Area Chart */}
           <GlassCard className="p-6">
             <h2 className="text-base font-semibold mb-4 flex items-center gap-2">
               <Users className="w-5 h-5 text-blue-500" />
@@ -466,7 +438,6 @@ export default function AnalyticsPage() {
             </div>
           </GlassCard>
 
-          {/* Consultation Trends */}
           <GlassCard className="p-6">
             <h2 className="text-base font-semibold mb-4 flex items-center gap-2">
               <Calendar className="w-5 h-5 text-purple-500" />
@@ -494,7 +465,6 @@ export default function AnalyticsPage() {
 
         {/* Row 2: Consultation Types + Role Distribution */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Consultation Types Pie */}
           <GlassCard className="p-6">
             <h2 className="text-base font-semibold mb-4 flex items-center gap-2">
               <PieChartIcon className="w-5 h-5 text-cyan-500" />
@@ -522,7 +492,6 @@ export default function AnalyticsPage() {
             </div>
           </GlassCard>
 
-          {/* Role Distribution */}
           <GlassCard className="p-6">
             <h2 className="text-base font-semibold mb-4 flex items-center gap-2">
               <Users className="w-5 h-5 text-green-500" />
@@ -555,7 +524,6 @@ export default function AnalyticsPage() {
 
         {/* Row 3: Prescription Status + Top Medications */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Prescription Status */}
           <GlassCard className="p-6">
             <h2 className="text-base font-semibold mb-4 flex items-center gap-2">
               <FileText className="w-5 h-5 text-emerald-500" />
@@ -583,7 +551,6 @@ export default function AnalyticsPage() {
             </div>
           </GlassCard>
 
-          {/* Top Medications */}
           <GlassCard className="p-6">
             <h2 className="text-base font-semibold mb-4 flex items-center gap-2">
               <BarChart3 className="w-5 h-5 text-amber-500" />
@@ -616,7 +583,6 @@ export default function AnalyticsPage() {
 
         {/* Row 4: Fulfillment + Order Status */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Fulfillment Distribution */}
           <GlassCard className="p-6">
             <h2 className="text-base font-semibold mb-4 flex items-center gap-2">
               <Pill className="w-5 h-5 text-pink-500" />
@@ -644,7 +610,6 @@ export default function AnalyticsPage() {
             </div>
           </GlassCard>
 
-          {/* Order Status */}
           <GlassCard className="p-6">
             <h2 className="text-base font-semibold mb-4 flex items-center gap-2">
               <Activity className="w-5 h-5 text-teal-500" />
@@ -706,8 +671,8 @@ export default function AnalyticsPage() {
                       </td>
                       <td className="p-3">
                         <span className={`px-2 py-1 rounded-md text-xs font-bold uppercase ${a.status === 'completed' ? 'bg-green-500/10 text-green-500' :
-                            a.status === 'scheduled' ? 'bg-blue-500/10 text-blue-500' :
-                              'bg-amber-500/10 text-amber-500'
+                          a.status === 'scheduled' ? 'bg-blue-500/10 text-blue-500' :
+                            'bg-amber-500/10 text-amber-500'
                           }`}>
                           {a.status}
                         </span>
