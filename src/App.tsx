@@ -17,7 +17,6 @@ import AuthPage from "./pages/auth/AuthPage";
 import PatientDashboard from "./pages/patient/PatientDashboard";
 import ConsultationsPage from "./pages/patient/ConsultationsPage";
 import PrescriptionsPage from "./pages/patient/PrescriptionsPage";
-import OrdersPage from "./pages/patient/OrdersPage";
 import MessagesPage from "./pages/patient/MessagesPage";
 
 // Doctor pages
@@ -31,13 +30,13 @@ import DoctorMessagesPage from "./pages/doctor/DoctorMessagesPage";
 import PharmacyDashboard from "./pages/pharmacy/PharmacyDashboard";
 import PharmacyPrescriptionsPage from "./pages/pharmacy/PharmacyPrescriptionsPage";
 import InventoryPage from "./pages/pharmacy/InventoryPage";
-import PharmacyOrdersPage from "./pages/pharmacy/PharmacyOrdersPage";
 import PharmacyMessagesPage from "./pages/pharmacy/PharmacyMessagesPage";
 
 // Admin pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import UsersPage from "./pages/admin/UsersPage";
 import AnalyticsPage from "./pages/admin/AnalyticsPage";
+import PharmaciesPage from "./pages/admin/PharmaciesPage";
 import LogsPage from "./pages/admin/LogsPage";
 
 import { ThemeProvider } from "@/components/ThemeProvider";
@@ -64,7 +63,6 @@ const App = () => (
                   <Route path="/patient" element={<PatientDashboard />} />
                   <Route path="/patient/consultations" element={<ConsultationsPage />} />
                   <Route path="/patient/prescriptions" element={<PrescriptionsPage />} />
-                  <Route path="/patient/orders" element={<OrdersPage />} />
                   <Route path="/patient/messages" element={<MessagesPage />} />
 
                   {/* Doctor routes */}
@@ -78,12 +76,12 @@ const App = () => (
                   <Route path="/pharmacy" element={<PharmacyDashboard />} />
                   <Route path="/pharmacy/prescriptions" element={<PharmacyPrescriptionsPage />} />
                   <Route path="/pharmacy/inventory" element={<InventoryPage />} />
-                  <Route path="/pharmacy/orders" element={<PharmacyOrdersPage />} />
                   <Route path="/pharmacy/messages" element={<PharmacyMessagesPage />} />
 
                   {/* Admin routes */}
                   <Route path="/admin" element={<AdminDashboard />} />
                   <Route path="/admin/users" element={<UsersPage />} />
+                  <Route path="/admin/pharmacies" element={<PharmaciesPage />} />
                   <Route path="/admin/analytics" element={<AnalyticsPage />} />
                   <Route path="/admin/logs" element={<LogsPage />} />
 

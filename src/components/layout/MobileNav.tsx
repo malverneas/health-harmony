@@ -1,10 +1,10 @@
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { NavLink, useLocation } from "react-router-dom";
-import { 
-  LayoutDashboard, 
-  Calendar, 
-  MessageSquare, 
+import {
+  LayoutDashboard,
+  Calendar,
+  MessageSquare,
   Pill,
   BarChart3,
   Users
@@ -14,7 +14,6 @@ const roleNavItems = {
   patient: [
     { icon: LayoutDashboard, label: "Home", path: "/patient" },
     { icon: Calendar, label: "Consults", path: "/patient/consultations" },
-    { icon: Pill, label: "Orders", path: "/patient/orders" },
     { icon: MessageSquare, label: "Chat", path: "/patient/messages" },
   ],
   doctor: [
@@ -26,7 +25,6 @@ const roleNavItems = {
   pharmacist: [
     { icon: LayoutDashboard, label: "Home", path: "/pharmacy" },
     { icon: Pill, label: "Inventory", path: "/pharmacy/inventory" },
-    { icon: LayoutDashboard, label: "Orders", path: "/pharmacy/orders" },
     { icon: MessageSquare, label: "Chat", path: "/pharmacy/messages" },
   ],
   admin: [
@@ -56,8 +54,8 @@ export function MobileNav() {
               to={item.path}
               className={cn(
                 "flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all",
-                isActive 
-                  ? "text-primary" 
+                isActive
+                  ? "text-primary"
                   : "text-muted-foreground"
               )}
             >

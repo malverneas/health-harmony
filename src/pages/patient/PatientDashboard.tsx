@@ -215,21 +215,21 @@ export default function PatientDashboard() {
         )}
 
         {/* Quick Actions Grid */}
-        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <GlassCard hover className="p-4 cursor-pointer" onClick={() => navigate('/patient/prescriptions')}>
             <div className="p-2.5 sm:p-3 rounded-xl bg-secondary/10 w-fit mb-3">
               <FileText className="w-5 h-5 text-secondary" />
             </div>
-            <h3 className="font-semibold text-sm sm:text-base">Prescriptions</h3>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-1">View your medications</p>
+            <h3 className="font-semibold text-sm sm:text-base">Medical History</h3>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">Access your prescriptions and health records</p>
           </GlassCard>
 
-          <GlassCard hover className="p-4 cursor-pointer" onClick={() => navigate('/patient/orders')}>
-            <div className="p-2.5 sm:p-3 rounded-xl bg-success/10 w-fit mb-3">
-              <Pill className="w-5 h-5 text-success" />
+          <GlassCard hover className="p-4 cursor-pointer" onClick={() => navigate('/patient/messages')}>
+            <div className="p-2.5 sm:p-3 rounded-xl bg-warning/10 w-fit mb-3">
+              <MessageSquare className="w-5 h-5 text-warning" />
             </div>
-            <h3 className="font-semibold text-sm sm:text-base">Orders</h3>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-1">Track your orders</p>
+            <h3 className="font-semibold text-sm sm:text-base">Support & Help</h3>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">Direct contact with your doctor or pharmacist</p>
           </GlassCard>
         </div>
 

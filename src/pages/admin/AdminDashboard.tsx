@@ -77,9 +77,9 @@ export default function AdminDashboard() {
         .order('created_at', { ascending: false })
         .limit(3);
 
-      const { data: recentOrders } = await supabase
-        .from('orders')
-        .select('id, created_at, status')
+      const { data: recentPharmacies } = await supabase
+        .from('pharmacies')
+        .select('name, created_at')
         .order('created_at', { ascending: false })
         .limit(2);
 
@@ -95,13 +95,13 @@ export default function AdminDashboard() {
         });
       });
 
-      recentOrders?.forEach(o => {
+      recentPharmacies?.forEach(p => {
         activities.push({
-          id: `o-${o.id}`,
-          action: `Order ${o.status.replace(/_/g, ' ')}`,
-          user: `Order ID: ...${o.id.slice(-6)}`,
-          time: o.created_at ? formatDistanceToNow(new Date(o.created_at), { addSuffix: true }) : 'Recently',
-          type: 'activity'
+          id: `p-${p.name}`,
+          action: "New pharmacy registered",
+          user: p.name,
+          time: p.created_at ? formatDistanceToNow(new Date(p.created_at), { addSuffix: true }) : 'Recently',
+          type: 'pharmacy'
         });
       });
 
@@ -258,6 +258,14 @@ export default function AdminDashboard() {
             </div>
             <h3 className="font-semibold text-sm sm:text-base">BI Analytics</h3>
             <p className="text-xs text-muted-foreground mt-1 text-balance">Deep dive into usage metrics</p>
+          </GlassCard>
+
+          <GlassCard hover className="p-4 cursor-pointer group" onClick={() => navigate('/admin/pharmacies')}>
+            <div className="p-2.5 sm:p-3 rounded-xl bg-success/10 w-fit mb-3 transition-colors group-hover:bg-success/20">
+              <Pill className="w-5 h-5 text-success" />
+            </div>
+            <h3 className="font-semibold text-sm sm:text-base">Pharmacies</h3>
+            <p className="text-xs text-muted-foreground mt-1 text-balance">Manage registered outlets</p>
           </GlassCard>
         </div>
 

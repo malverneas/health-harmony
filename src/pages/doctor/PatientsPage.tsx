@@ -1,12 +1,10 @@
-import { useState, useEffect } from "react";
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { GlassCard } from "@/components/layout/GlassCard";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { User, Search, FileText, Loader2, Users } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { format } from "date-fns";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 interface Patient {
   id: string;
@@ -14,6 +12,7 @@ interface Patient {
   email: string;
   lastVisit: Date | null;
   consultationCount: number;
+  membershipNumber?: string;
 }
 
 export default function PatientsPage() {
@@ -21,6 +20,7 @@ export default function PatientsPage() {
   const [filteredPatients, setFilteredPatients] = useState<Patient[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -32,9 +32,10 @@ export default function PatientsPage() {
       setFilteredPatients(patients);
     } else {
       setFilteredPatients(
-        patients.filter(p => 
+        patients.filter(p =>
           p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          p.email.toLowerCase().includes(searchQuery.toLowerCase())
+          p.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (p.membershipNumber && p.membershipNumber.toLowerCase().includes(searchQuery.toLowerCase()))
         )
       );
     }
@@ -42,7 +43,7 @@ export default function PatientsPage() {
 
   const fetchPatients = async () => {
     if (!user) return;
-    
+
     setIsLoading(true);
     try {
       // Get all consultations for this doctor to find unique patients
@@ -57,7 +58,7 @@ export default function PatientsPage() {
       if (consultations && consultations.length > 0) {
         // Get unique patient IDs and their consultation info
         const patientMap = new Map<string, { lastVisit: Date; count: number }>();
-        
+
         consultations.forEach(c => {
           const existing = patientMap.get(c.patient_id);
           if (existing) {
@@ -75,7 +76,7 @@ export default function PatientsPage() {
         // Fetch patient profiles
         const { data: profiles } = await supabase
           .from('profiles')
-          .select('user_id, full_name, email')
+          .select('user_id, full_name, email, membership_number')
           .in('user_id', patientIds);
 
         if (profiles) {
@@ -84,7 +85,8 @@ export default function PatientsPage() {
             name: p.full_name,
             email: p.email,
             lastVisit: patientMap.get(p.user_id)?.lastVisit || null,
-            consultationCount: patientMap.get(p.user_id)?.count || 0
+            consultationCount: patientMap.get(p.user_id)?.count || 0,
+            membershipNumber: p.membership_number
           })));
         }
       } else {
@@ -104,9 +106,9 @@ export default function PatientsPage() {
           <h1 className="text-2xl font-bold">My Patients</h1>
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input 
-              placeholder="Search patients..." 
-              className="pl-9" 
+            <Input
+              placeholder="Search patients..."
+              className="pl-9"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -118,13 +120,13 @@ export default function PatientsPage() {
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         ) : filteredPatients.length === 0 ? (
-          <GlassCard className="p-8 text-center">
+          <GlassCard className="p-8 text-center" id="empty-patients-view">
             <Users className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">
               {patients.length === 0 ? "No patients yet" : "No matching patients"}
             </h3>
             <p className="text-muted-foreground">
-              {patients.length === 0 
+              {patients.length === 0
                 ? "Patients who book consultations with you will appear here"
                 : "Try a different search term"
               }
@@ -147,7 +149,12 @@ export default function PatientsPage() {
                       </p>
                     </div>
                   </div>
-                  <Button variant="outline" size="sm" className="gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => setSelectedPatient(patient)}
+                  >
                     <FileText className="w-4 h-4" />
                     View
                   </Button>
@@ -157,6 +164,62 @@ export default function PatientsPage() {
           </div>
         )}
       </div>
+
+      <Dialog open={!!selectedPatient} onOpenChange={(open) => !open && setSelectedPatient(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <User className="w-5 h-5 text-primary" />
+              Patient Details
+            </DialogTitle>
+            <DialogDescription>
+              Comprehensive information about {selectedPatient?.name}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground uppercase font-semibold">Full Name</p>
+                <p className="text-sm font-medium">{selectedPatient?.name}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground uppercase font-semibold">Email Address</p>
+                <p className="text-sm font-medium truncate">{selectedPatient?.email}</p>
+              </div>
+              <div className="space-y-1 border-t border-border/50 pt-3">
+                <p className="text-xs text-muted-foreground uppercase font-semibold">Membership ID</p>
+                <p className="text-sm font-bold text-primary">{selectedPatient?.membershipNumber || 'Not provided'}</p>
+              </div>
+              <div className="space-y-1 border-t border-border/50 pt-3">
+                <p className="text-xs text-muted-foreground uppercase font-semibold">Last Visit</p>
+                <p className="text-sm font-medium">
+                  {selectedPatient?.lastVisit ? format(selectedPatient.lastVisit, 'PPP') : 'N/A'}
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-muted/30 p-4 rounded-xl border border-border/50">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs text-muted-foreground uppercase font-semibold">Consultation Summary</p>
+                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                  {selectedPatient?.consultationCount} Total
+                </Badge>
+              </div>
+              <p className="text-sm text-balance">
+                This patient has completed {selectedPatient?.consultationCount} sessions with you.
+                View their full medical history in the prescriptions tab.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <Button variant="outline" onClick={() => setSelectedPatient(null)}>
+              Close Record
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

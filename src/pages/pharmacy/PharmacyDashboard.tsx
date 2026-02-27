@@ -277,21 +277,21 @@ export default function PharmacyDashboard() {
         </GlassCard>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 gap-3 sm:gap-4">
-          <GlassCard hover className="p-4 cursor-pointer" onClick={() => navigate('/pharmacy/orders')}>
-            <div className="p-2.5 sm:p-3 rounded-xl bg-secondary/10 w-fit mb-3">
-              <Package className="w-5 h-5 text-secondary" />
-            </div>
-            <h3 className="font-semibold text-sm sm:text-base">Active Orders</h3>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-1">{stats.activeOrders} to process</p>
-          </GlassCard>
-
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <GlassCard hover className="p-4 cursor-pointer" onClick={() => navigate('/pharmacy/inventory')}>
             <div className="p-2.5 sm:p-3 rounded-xl bg-success/10 w-fit mb-3">
               <Pill className="w-5 h-5 text-success" />
             </div>
-            <h3 className="font-semibold text-sm sm:text-base">Inventory</h3>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-1">Manage stock</p>
+            <h3 className="font-semibold text-sm sm:text-base">Inventory Management</h3>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">Add, update and track medical stock levels</p>
+          </GlassCard>
+
+          <GlassCard hover className="p-4 cursor-pointer" onClick={() => navigate('/pharmacy/prescriptions')}>
+            <div className="p-2.5 sm:p-3 rounded-xl bg-primary/10 w-fit mb-3">
+              <FileText className="w-5 h-5 text-primary" />
+            </div>
+            <h3 className="font-semibold text-sm sm:text-base">View Prescriptions</h3>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">Review and process incoming medical scripts</p>
           </GlassCard>
         </div>
 

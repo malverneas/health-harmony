@@ -19,7 +19,6 @@ const roleNavItems = {
     { icon: LayoutDashboard, label: "Home", path: "/patient" },
     { icon: Calendar, label: "Consultations", path: "/patient/consultations" },
     { icon: FileText, label: "Prescriptions", path: "/patient/prescriptions" },
-    { icon: Pill, label: "Orders", path: "/patient/orders" },
     { icon: MessageSquare, label: "Messages", path: "/patient/messages" },
   ],
   doctor: [
@@ -33,12 +32,12 @@ const roleNavItems = {
     { icon: LayoutDashboard, label: "Home", path: "/pharmacy" },
     { icon: FileText, label: "Prescriptions", path: "/pharmacy/prescriptions" },
     { icon: Pill, label: "Inventory", path: "/pharmacy/inventory" },
-    { icon: LayoutDashboard, label: "Orders", path: "/pharmacy/orders" },
     { icon: MessageSquare, label: "Messages", path: "/pharmacy/messages" },
   ],
   admin: [
     { icon: LayoutDashboard, label: "Home", path: "/admin" },
     { icon: Users, label: "Users", path: "/admin/users" },
+    { icon: Pill, label: "Pharmacies", path: "/admin/pharmacies" },
     { icon: BarChart3, label: "Reports", path: "/admin/analytics" },
     { icon: MessageSquare, label: "Logs", path: "/admin/logs" },
   ],

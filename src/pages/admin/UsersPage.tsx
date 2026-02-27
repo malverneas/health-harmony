@@ -22,6 +22,8 @@ interface UserData {
   email: string;
   role: string;
   status: string;
+  membershipNumber?: string;
+  specialty?: string;
 }
 
 const statusColors: Record<string, string> = {
@@ -51,7 +53,7 @@ export default function UsersPage() {
     try {
       const { data: profiles, error: profileError } = await supabase
         .from('profiles')
-        .select('user_id, full_name, email');
+        .select('user_id, full_name, email, membership_number, specialty');
 
       if (profileError) throw profileError;
 
@@ -68,7 +70,9 @@ export default function UsersPage() {
         name: p.full_name || 'Unknown',
         email: p.email,
         role: roleMap.get(p.user_id) || 'patient',
-        status: 'active'
+        status: 'active',
+        membershipNumber: p.membership_number,
+        specialty: p.specialty
       })) || [];
 
       setUsers(userData);
@@ -85,7 +89,7 @@ export default function UsersPage() {
     setIsDeleting(true);
     try {
       // Call the admin_delete_user RPC
-      const { error } = await supabase.rpc('admin_delete_user', {
+      const { error } = await (supabase.rpc as any)('admin_delete_user', {
         target_user_id: deleteUser.id,
       });
 
@@ -118,7 +122,8 @@ export default function UsersPage() {
     const filtered = users.filter(u =>
       u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.role.toLowerCase().includes(searchQuery.toLowerCase())
+      u.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (u.membershipNumber && u.membershipNumber.toLowerCase().includes(searchQuery.toLowerCase()))
     );
     setFilteredUsers(filtered);
   }, [searchQuery, users]);
@@ -167,6 +172,12 @@ export default function UsersPage() {
                     <div>
                       <h3 className="font-semibold">{user.name}</h3>
                       <p className="text-sm text-muted-foreground">{user.email}</p>
+                      {user.role === 'patient' && user.membershipNumber && (
+                        <p className="text-xs text-primary/70 font-medium">Mem: {user.membershipNumber}</p>
+                      )}
+                      {user.role === 'doctor' && user.specialty && (
+                        <p className="text-xs text-secondary/70 font-medium">{user.specialty}</p>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
