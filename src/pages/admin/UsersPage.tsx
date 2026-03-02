@@ -51,34 +51,22 @@ export default function UsersPage() {
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
-      const { data: profiles, error: profileError } = await supabase
-        .from('profiles')
-        .select('user_id, full_name, email, membership_number, specialty');
+      const { data, error } = await (supabase.rpc as any)('admin_get_all_users');
 
-      if (profileError) throw profileError;
+      if (error) throw error;
 
-      const { data: roles, error: roleError } = await supabase
-        .from('user_roles')
-        .select('user_id, role');
+      // Ensure data is parsed correctly if returned as JSON string
+      let parsedData = Array.isArray(data) ? data : JSON.parse(data || '[]');
 
-      if (roleError) throw roleError;
-
-      const roleMap = new Map(roles?.map(r => [r.user_id, r.role]) || []);
-
-      const userData = profiles?.map(p => ({
-        id: p.user_id,
-        name: p.full_name || 'Unknown',
-        email: p.email,
-        role: roleMap.get(p.user_id) || 'patient',
-        status: 'active',
-        membershipNumber: p.membership_number,
-        specialty: p.specialty
-      })) || [];
-
-      setUsers(userData);
-      setFilteredUsers(userData);
+      setUsers(parsedData);
+      setFilteredUsers(parsedData);
     } catch (error) {
       console.error('Error fetching users:', error);
+      toast({
+        title: "Configuration Required",
+        description: "Please run the 20260302000000_admin_users_rpc.sql migration in Supabase to view all users.",
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }

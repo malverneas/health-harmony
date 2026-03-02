@@ -164,41 +164,91 @@ export default function PharmacyDashboard() {
     try {
       const { data: pharma } = await supabase.from('pharmacies').select('id').eq('user_id', user.id).single();
       if (pharma) {
-        const { data: orders, error } = await supabase
-          .from('orders')
-          .select(`
-            id,
-            patient_id,
-            delivery_type,
-            status,
-            created_at
-          `)
+        const exportData: any[] = [];
+
+        // 1. Fetch Inventory
+        const { data: inventory, error: invError } = await (supabase
+          .from('pharmacy_inventory' as any)
+          .select('medication_name, quantity, category, updated_at')
+          .eq('pharmacy_id', pharma.id) as any);
+
+        if (!invError && inventory) {
+          inventory.forEach((item: any) => {
+            exportData.push({
+              'Record Type': 'Inventory',
+              'Item / ID': item.medication_name,
+              'Status / Details': `Category: ${item.category}`,
+              'Date / Quantity': `${item.quantity} in stock (Updated: ${format(new Date(item.updated_at), 'MMM d, yyyy')})`,
+              'Associated Person': 'N/A'
+            });
+          });
+        }
+
+        // 2. Fetch Prescriptions
+        const { data: rxList, error: rxError } = await supabase
+          .from('prescriptions')
+          .select('id, status, created_at, patient_id, doctor_id')
           .eq('pharmacy_id', pharma.id);
 
-        if (error) throw error;
-
-        if (orders && orders.length > 0) {
-          const patientIds = [...new Set(orders.map(o => o.patient_id))];
-          const { data: profiles } = await supabase
-            .from('profiles')
-            .select('user_id, full_name')
-            .in('user_id', patientIds);
-
+        if (!rxError && rxList && rxList.length > 0) {
+          const userIds = [...new Set([...rxList.map(r => r.patient_id), ...rxList.map(r => r.doctor_id)])];
+          const { data: profiles } = await supabase.from('profiles').select('user_id, full_name').in('user_id', userIds);
           const profileMap = new Map(profiles?.map(p => [p.user_id, p.full_name]) || []);
 
-          const exportData = orders.map(o => ({
-            'Patient Name': profileMap.get(o.patient_id) || 'Unknown',
-            'Order Date': format(new Date(o.created_at!), 'PPP'),
-            'Type': o.delivery_type,
-            'Status': o.status.replace(/_/g, ' '),
-            'Order ID': o.id
-          }));
+          rxList.forEach((rx) => {
+            exportData.push({
+              'Record Type': 'Prescription',
+              'Item / ID': rx.id,
+              'Status / Details': rx.status.replace(/_/g, ' '),
+              'Date / Quantity': format(new Date(rx.created_at!), 'MMM d, yyyy'),
+              'Associated Person': `Patient: ${profileMap.get(rx.patient_id) || 'Unknown'} | Dr: ${profileMap.get(rx.doctor_id) || 'Unknown'}`
+            });
+          });
+        }
 
-          downloadAsCSV(exportData, 'pharmacy_orders_report');
+        // 3. Fetch Orders
+        const { data: orders, error: ordersError } = await supabase
+          .from('orders')
+          .select('id, patient_id, delivery_type, status, created_at')
+          .eq('pharmacy_id', pharma.id);
+
+        if (!ordersError && orders && orders.length > 0) {
+          const patientIds = [...new Set(orders.map(o => o.patient_id))];
+          const { data: profiles } = await supabase.from('profiles').select('user_id, full_name').in('user_id', patientIds);
+          const profileMap = new Map(profiles?.map(p => [p.user_id, p.full_name]) || []);
+
+          orders.forEach((o) => {
+            exportData.push({
+              'Record Type': 'Order',
+              'Item / ID': o.id,
+              'Status / Details': `${o.delivery_type} - ${o.status.replace(/_/g, ' ')}`,
+              'Date / Quantity': format(new Date(o.created_at!), 'MMM d, yyyy'),
+              'Associated Person': profileMap.get(o.patient_id) || 'Unknown'
+            });
+          });
+        }
+
+        if (exportData.length > 0) {
+          downloadAsCSV(exportData, 'pharmacy_comprehensive_report');
+          toast({
+            title: "Export Successful",
+            description: "Your comprehensive data has been exported to CSV."
+          });
+        } else {
+          toast({
+            title: "No Data",
+            description: "There is no pharmacy data to export at this time.",
+            variant: "default"
+          });
         }
       }
     } catch (error) {
       console.error('Export error:', error);
+      toast({
+        title: "Export Failed",
+        description: "An error occurred while exporting your data.",
+        variant: "destructive"
+      });
     } finally {
       setIsExporting(false);
     }
