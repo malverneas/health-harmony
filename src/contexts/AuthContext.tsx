@@ -8,6 +8,7 @@ interface User {
   email: string;
   fullName: string;
   role: UserRole;
+  phone?: string;
 }
 
 interface AuthContextType {
@@ -25,6 +26,7 @@ interface RegisterData {
   password: string;
   fullName: string;
   role: UserRole;
+  phone?: string;
   pharmacyName?: string;
   pharmacyAddress?: string;
   licenseNumber?: string;
@@ -89,6 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           email: profile.email,
           fullName: profile.full_name,
           role: roleData.role as UserRole,
+          phone: profile.phone,
         });
         setIsLoading(false);
         return true;
@@ -200,6 +203,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         data: {
           full_name: data.fullName,
           role: data.role,
+          phone: data.phone,
           pharmacy_name: data.pharmacyName,
           address: data.pharmacyAddress,
           license_number: data.licenseNumber,

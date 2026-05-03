@@ -19,7 +19,8 @@ import {
   Building,
   Moon,
   Sun,
-  Hash
+  Hash,
+  Phone
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -42,6 +43,7 @@ export default function AuthPage() {
   const [licenseNumber, setLicenseNumber] = useState("");
   const [specialty, setSpecialty] = useState("");
   const [membershipNumber, setMembershipNumber] = useState("");
+  const [phone, setPhone] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -80,6 +82,7 @@ export default function AuthPage() {
           password,
           fullName,
           role: selectedRole,
+          phone,
           pharmacyName: selectedRole === 'pharmacist' ? pharmacyName : undefined,
           pharmacyAddress: selectedRole === 'pharmacist' ? pharmacyAddress : undefined,
           licenseNumber: selectedRole === 'doctor' ? licenseNumber : undefined,
@@ -195,21 +198,38 @@ export default function AuthPage() {
               </div>
             )}
 
-            {/* Full Name (only for signup) */}
+            {/* Full Name and Phone (only for signup) */}
             {!isLogin && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Full Name</label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder="John Doe"
-                    className="pl-10"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    required={!isLogin}
-                  />
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Full Name</label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="John Doe"
+                      className="pl-10"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      required={!isLogin}
+                    />
+                  </div>
                 </div>
-              </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Phone Number</label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="+263771234567"
+                      className="pl-10"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      required={!isLogin}
+                    />
+                    <p className="text-[10px] text-muted-foreground mt-1">Include country code (e.g., +263)</p>
+                  </div>
+                </div>
+              </>
             )}
 
             {/* Patient specific fields */}

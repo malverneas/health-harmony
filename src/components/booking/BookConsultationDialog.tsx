@@ -1,15 +1,17 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Video, MessageSquare, User, Loader2 } from "lucide-react";
+import { Video, MessageSquare, User, Loader2, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { sendConsultationConfirmationEmail } from "@/utils/emailService";
+import { sendWhatsAppNotification } from "@/utils/whatsappService";
 
 interface BookConsultationDialogProps {
   open: boolean;
@@ -48,8 +50,12 @@ export function BookConsultationDialog({ open, onOpenChange, onSuccess }: BookCo
   const [reason, setReason] = useState("");
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [bookedSlots, setBookedSlots] = useState<BookedSlot[]>([]);
+  const [temperature, setTemperature] = useState("");
+  const [bloodPressure, setBloodPressure] = useState("");
+  const [sugarLevel, setSugarLevel] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
+  const [temporaryPhone, setTemporaryPhone] = useState("");
 
   const { user } = useAuth();
   const { toast } = useToast();
@@ -171,7 +177,17 @@ export function BookConsultationDialog({ open, onOpenChange, onSuccess }: BookCo
   };
 
   const handleBook = async () => {
-    if (!user || !selectedDoctor || !selectedDate || !selectedTime) return;
+    console.log("[DEBUG] Booking Triggered. User:", user);
+    if (!user || !selectedDoctor || !selectedDate || !selectedTime) {
+      console.warn("[DEBUG] Missing required booking data:", { 
+        hasUser: !!user, 
+        hasPhone: !!user?.phone,
+        selectedDoctor, 
+        selectedDate, 
+        selectedTime 
+      });
+      return;
+    }
 
     setIsLoading(true);
     try {
@@ -179,12 +195,16 @@ export function BookConsultationDialog({ open, onOpenChange, onSuccess }: BookCo
       const [hours, minutes] = selectedTime.split(':');
       scheduledAt.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 
+      const fullReason = reason + (temperature || bloodPressure || sugarLevel 
+        ? `\n\n[VITALS] Temp: ${temperature || 'N/A'}, BP: ${bloodPressure || 'N/A'}, Sugar: ${sugarLevel || 'N/A'}`
+        : "");
+
       const payload = {
         patient_id: user.id,
         doctor_id: selectedDoctor,
         consultation_type: consultationType,
         scheduled_at: scheduledAt.toISOString(),
-        reason,
+        reason: fullReason,
         status: 'scheduled'
       };
 
@@ -201,7 +221,7 @@ export function BookConsultationDialog({ open, onOpenChange, onSuccess }: BookCo
           p_doctor_id: selectedDoctor,
           p_consultation_type: consultationType,
           p_scheduled_at: scheduledAt.toISOString(),
-          p_reason: reason || null,
+          p_reason: fullReason || null,
           p_status: 'scheduled'
         });
 
@@ -226,7 +246,12 @@ export function BookConsultationDialog({ open, onOpenChange, onSuccess }: BookCo
         payload: {
           patientName: user.fullName || 'A patient',
           scheduledAt: scheduledAt.toISOString(),
-          type: consultationType
+          type: consultationType,
+          vitals: {
+            temperature,
+            bloodPressure,
+            sugarLevel
+          }
         }
       });
       supabase.removeChannel(channel);
@@ -254,7 +279,36 @@ export function BookConsultationDialog({ open, onOpenChange, onSuccess }: BookCo
           console.log("Confirmation email sent successfully");
         } catch (emailError) {
           console.error("Failed to send confirmation email:", emailError);
-          // We don't toast error here because the booking itself was successful
+        }
+      }
+
+      // Send WhatsApp notification
+      const phoneToSend = user?.phone || temporaryPhone;
+      if (phoneToSend && doctor) {
+        try {
+          await sendWhatsAppNotification({
+            phone: phoneToSend,
+            patientName: user.fullName || 'Patient',
+            doctorName: doctor.fullName,
+            consultationType: consultationType,
+            scheduledAt: format(scheduledAt, 'PPp'),
+            vitals: {
+              temperature,
+              bloodPressure,
+              sugarLevel
+            }
+          });
+          console.log("WhatsApp notification sent successfully");
+
+          // Update profile with the phone number if it was missing
+          if (!user?.phone && temporaryPhone) {
+            await supabase
+              .from('profiles')
+              .update({ phone: temporaryPhone })
+              .eq('user_id', user.id);
+          }
+        } catch (waError) {
+          console.error("Failed to send WhatsApp notification:", waError);
         }
       }
 
@@ -277,6 +331,9 @@ export function BookConsultationDialog({ open, onOpenChange, onSuccess }: BookCo
     setSelectedTime("");
     setSelectedDoctor("");
     setReason("");
+    setTemperature("");
+    setBloodPressure("");
+    setSugarLevel("");
     setBookedSlots([]);
   };
 
@@ -417,12 +474,39 @@ export function BookConsultationDialog({ open, onOpenChange, onSuccess }: BookCo
 
         {step === 4 && (
           <div className="space-y-4">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-2">
+                <label className="text-xs font-medium">Temperature (°C)</label>
+                <Input
+                  placeholder="36.5"
+                  value={temperature}
+                  onChange={(e) => setTemperature(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium">BP (mmHg)</label>
+                <Input
+                  placeholder="120/80"
+                  value={bloodPressure}
+                  onChange={(e) => setBloodPressure(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium">Sugar (mmol/L)</label>
+                <Input
+                  placeholder="5.5"
+                  value={sugarLevel}
+                  onChange={(e) => setSugarLevel(e.target.value)}
+                />
+              </div>
+            </div>
+            
             <p className="text-muted-foreground">Additional details (optional)</p>
             <Textarea
               placeholder="Describe your symptoms or reason for consultation..."
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              rows={4}
+              rows={3}
             />
             <div className="p-4 rounded-xl bg-muted/30 border border-border">
               <h4 className="font-medium mb-2">Booking Summary</h4>
@@ -434,6 +518,24 @@ export function BookConsultationDialog({ open, onOpenChange, onSuccess }: BookCo
                 )}
               </div>
             </div>
+
+            {!user?.phone && (
+              <div className="p-4 rounded-xl border border-primary/30 bg-primary/5 space-y-2">
+                <p className="text-sm font-medium flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-primary" />
+                  WhatsApp Notification
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Provide your WhatsApp number to receive a booking confirmation.
+                </p>
+                <Input
+                  placeholder="+263771234567"
+                  value={temporaryPhone}
+                  onChange={(e) => setTemporaryPhone(e.target.value)}
+                  className="bg-background/50"
+                />
+              </div>
+            )}
           </div>
         )}
 
