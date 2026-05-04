@@ -19,6 +19,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
+  updateProfile: (data: Partial<RegisterData>) => Promise<void>;
 }
 
 interface RegisterData {
@@ -31,6 +32,7 @@ interface RegisterData {
   pharmacyAddress?: string;
   licenseNumber?: string;
   specialty?: string;
+  address?: string;
   membershipNumber?: string;
 }
 
@@ -205,7 +207,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           role: data.role,
           phone: data.phone,
           pharmacy_name: data.pharmacyName,
-          address: data.pharmacyAddress,
+          address: data.role === 'pharmacist' ? data.pharmacyAddress : data.address,
           license_number: data.licenseNumber,
           specialty: data.specialty,
           membership_number: data.membershipNumber,
@@ -226,6 +228,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setSession(null);
   };
+  
+  const updateProfile = async (data: Partial<RegisterData>) => {
+    if (!user) return;
+    
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        full_name: data.fullName,
+        phone: data.phone,
+        specialty: data.specialty,
+        address: data.address,
+        license_number: data.licenseNumber,
+        membership_number: data.membershipNumber,
+      })
+      .eq('user_id', user.id);
+      
+    if (error) throw error;
+    
+    // Refresh local state
+    await fetchUserData(user.id);
+  };
 
   return (
     <AuthContext.Provider
@@ -237,6 +260,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         register,
         logout,
+        updateProfile,
       }}
     >
       {children}

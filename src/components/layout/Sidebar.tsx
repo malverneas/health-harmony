@@ -10,7 +10,8 @@ import {
   Users,
   BarChart3,
   LogOut,
-  Stethoscope
+  Stethoscope,
+  UserCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -20,6 +21,7 @@ const roleNavItems = {
     { icon: Calendar, label: "Consultations", path: "/patient/consultations" },
     { icon: FileText, label: "Prescriptions", path: "/patient/prescriptions" },
     { icon: MessageSquare, label: "Messages", path: "/patient/messages" },
+    { icon: UserCircle, label: "Profile", path: "/patient/profile" },
   ],
   doctor: [
     { icon: LayoutDashboard, label: "Home", path: "/doctor" },
@@ -27,12 +29,14 @@ const roleNavItems = {
     { icon: Users, label: "Patients", path: "/doctor/patients" },
     { icon: FileText, label: "Prescriptions", path: "/doctor/prescriptions" },
     { icon: MessageSquare, label: "Messages", path: "/doctor/messages" },
+    { icon: UserCircle, label: "Profile", path: "/doctor/profile" },
   ],
   pharmacist: [
     { icon: LayoutDashboard, label: "Home", path: "/pharmacy" },
     { icon: FileText, label: "Prescriptions", path: "/pharmacy/prescriptions" },
     { icon: Pill, label: "Inventory", path: "/pharmacy/inventory" },
     { icon: MessageSquare, label: "Messages", path: "/pharmacy/messages" },
+    { icon: UserCircle, label: "Profile", path: "/pharmacy/profile" },
   ],
   admin: [
     { icon: LayoutDashboard, label: "Home", path: "/admin" },
@@ -40,6 +44,7 @@ const roleNavItems = {
     { icon: Pill, label: "Pharmacies", path: "/admin/pharmacies" },
     { icon: BarChart3, label: "Reports", path: "/admin/analytics" },
     { icon: MessageSquare, label: "Logs", path: "/admin/logs" },
+    { icon: UserCircle, label: "Profile", path: "/admin/profile" },
   ],
 };
 

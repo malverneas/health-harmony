@@ -12,6 +12,7 @@ import { GlobalCallManager } from "@/components/video/GlobalCallManager";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import AuthPage from "./pages/auth/AuthPage";
+import ProfilePage from "./pages/shared/ProfilePage";
 
 // Patient pages
 import PatientDashboard from "./pages/patient/PatientDashboard";
@@ -64,6 +65,7 @@ const App = () => (
                   <Route path="/patient/consultations" element={<ConsultationsPage />} />
                   <Route path="/patient/prescriptions" element={<PrescriptionsPage />} />
                   <Route path="/patient/messages" element={<MessagesPage />} />
+                  <Route path="/patient/profile" element={<ProfilePage />} />
 
                   {/* Doctor routes */}
                   <Route path="/doctor" element={<DoctorDashboard />} />
@@ -71,12 +73,14 @@ const App = () => (
                   <Route path="/doctor/patients" element={<PatientsPage />} />
                   <Route path="/doctor/prescriptions" element={<DoctorPrescriptionsPage />} />
                   <Route path="/doctor/messages" element={<DoctorMessagesPage />} />
+                  <Route path="/doctor/profile" element={<ProfilePage />} />
 
                   {/* Pharmacy routes */}
                   <Route path="/pharmacy" element={<PharmacyDashboard />} />
                   <Route path="/pharmacy/prescriptions" element={<PharmacyPrescriptionsPage />} />
                   <Route path="/pharmacy/inventory" element={<InventoryPage />} />
                   <Route path="/pharmacy/messages" element={<PharmacyMessagesPage />} />
+                  <Route path="/pharmacy/profile" element={<ProfilePage />} />
 
                   {/* Admin routes */}
                   <Route path="/admin" element={<AdminDashboard />} />
@@ -84,6 +88,7 @@ const App = () => (
                   <Route path="/admin/pharmacies" element={<PharmaciesPage />} />
                   <Route path="/admin/analytics" element={<AnalyticsPage />} />
                   <Route path="/admin/logs" element={<LogsPage />} />
+                  <Route path="/admin/profile" element={<ProfilePage />} />
 
                   {/* Catch-all */}
                   <Route path="*" element={<NotFound />} />

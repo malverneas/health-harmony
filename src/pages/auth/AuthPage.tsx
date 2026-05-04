@@ -42,6 +42,7 @@ export default function AuthPage() {
   const [pharmacyAddress, setPharmacyAddress] = useState("");
   const [licenseNumber, setLicenseNumber] = useState("");
   const [specialty, setSpecialty] = useState("");
+  const [clinicAddress, setClinicAddress] = useState("");
   const [membershipNumber, setMembershipNumber] = useState("");
   const [phone, setPhone] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -87,6 +88,7 @@ export default function AuthPage() {
           pharmacyAddress: selectedRole === 'pharmacist' ? pharmacyAddress : undefined,
           licenseNumber: selectedRole === 'doctor' ? licenseNumber : undefined,
           specialty: selectedRole === 'doctor' ? specialty : undefined,
+          address: selectedRole === 'doctor' ? clinicAddress : undefined,
           membershipNumber: selectedRole === 'patient' ? membershipNumber : undefined,
         });
         console.log("[AuthPage] Registration call successful");
@@ -260,15 +262,24 @@ export default function AuthPage() {
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Specialty</label>
-                  <Input
-                    placeholder="General Medicine"
-                    value={specialty}
-                    onChange={(e) => setSpecialty(e.target.value)}
-                    required
-                  />
-                </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Specialty</label>
+                    <Input
+                      placeholder="General Medicine"
+                      value={specialty}
+                      onChange={(e) => setSpecialty(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Clinic Address / Location</label>
+                    <Input
+                      placeholder="123 Medical Plaza, City"
+                      value={clinicAddress}
+                      onChange={(e) => setClinicAddress(e.target.value)}
+                      required
+                    />
+                  </div>
               </>
             )}
 

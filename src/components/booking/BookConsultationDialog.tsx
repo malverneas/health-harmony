@@ -7,7 +7,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Video, MessageSquare, User, Loader2, Phone } from "lucide-react";
+import { Video, MessageSquare, User, Loader2, Phone, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { sendConsultationConfirmationEmail } from "@/utils/emailService";
@@ -23,6 +23,7 @@ interface Doctor {
   id: string;
   fullName: string;
   specialty: string;
+  address?: string;
 }
 
 interface BookedSlot {
@@ -84,7 +85,8 @@ export function BookConsultationDialog({ open, onOpenChange, onSuccess }: BookCo
         setDoctors(rpcDoctors.map((d: any) => ({
           id: d.id,
           fullName: d.full_name,
-          specialty: d.specialty || ''
+          specialty: d.specialty || '',
+          address: d.address || ''
         })));
         return;
       }
@@ -107,7 +109,7 @@ export function BookConsultationDialog({ open, onOpenChange, onSuccess }: BookCo
         const doctorIds = doctorRoles.map(r => r.user_id);
         const { data: profiles, error: profilesError } = await supabase
           .from('profiles')
-          .select('user_id, full_name, specialty')
+          .select('user_id, full_name, specialty, address')
           .in('user_id', doctorIds);
 
         if (profilesError) {
@@ -119,7 +121,8 @@ export function BookConsultationDialog({ open, onOpenChange, onSuccess }: BookCo
           setDoctors(profiles.map(p => ({
             id: p.user_id,
             fullName: p.full_name,
-            specialty: p.specialty || ''
+            specialty: p.specialty || '',
+            address: p.address || ''
           })));
         }
       } else {
@@ -416,7 +419,15 @@ export function BookConsultationDialog({ open, onOpenChange, onSuccess }: BookCo
                     </div>
                     <div>
                       <p className="font-medium">{doctor.fullName}</p>
-                      <p className="text-sm text-muted-foreground">{doctor.specialty}</p>
+                      <div className="flex flex-col gap-0.5">
+                        <p className="text-sm text-primary font-medium">{doctor.specialty}</p>
+                        {doctor.address && (
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <MapPin className="w-3 h-3" />
+                            {doctor.address}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </button>
                 ))}
@@ -513,6 +524,10 @@ export function BookConsultationDialog({ open, onOpenChange, onSuccess }: BookCo
               <div className="space-y-1 text-sm text-muted-foreground">
                 <p>Type: {consultationTypes.find(t => t.id === consultationType)?.label}</p>
                 <p>Doctor: {doctors.find(d => d.id === selectedDoctor)?.fullName}</p>
+                <p>Specialty: {doctors.find(d => d.id === selectedDoctor)?.specialty}</p>
+                {doctors.find(d => d.id === selectedDoctor)?.address && (
+                  <p>Location: {doctors.find(d => d.id === selectedDoctor)?.address}</p>
+                )}
                 {selectedDate && selectedTime && (
                   <p>Date: {format(selectedDate, 'PPP')} at {selectedTime}</p>
                 )}
