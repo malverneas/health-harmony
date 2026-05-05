@@ -24,28 +24,62 @@ export function useConsultationNotifications() {
                 "broadcast",
                 { event: "new-booking" },
                 (payload) => {
-                    const { patientName, scheduledAt, type } = payload.payload;
+                    const { patientName, scheduledAt, type, vitals } = payload.payload;
+                    
+                    // Check for high vitals
+                    const alerts: string[] = [];
+                    if (vitals) {
+                        const temp = parseFloat(vitals.temperature);
+                        if (!isNaN(temp) && temp >= 38) alerts.push(`High Temp: ${vitals.temperature}°C`);
+                        
+                        if (vitals.bloodPressure?.includes('/')) {
+                            const [sys, dia] = vitals.bloodPressure.split('/').map((v: string) => parseInt(v.trim()));
+                            if (sys >= 140 || dia >= 90) alerts.push(`High BP: ${vitals.bloodPressure}`);
+                        }
+                        
+                        const sugar = parseFloat(vitals.sugarLevel);
+                        if (!isNaN(sugar) && sugar > 10) alerts.push(`High Sugar: ${vitals.sugarLevel} mmol/L`);
+                    }
 
                     // Play sound
                     if (audioRef.current) {
                         audioRef.current.play().catch(e => console.error("Error playing notification sound:", e));
                     }
 
-                    toast.success("New Booking!", {
-                        description: `${patientName} booked a ${type} consultation for ${format(new Date(scheduledAt), 'PPp')}`,
-                        action: {
-                            label: "View Schedule",
-                            onClick: () => navigate("/doctor/schedule"),
-                        },
-                        duration: 10000,
-                    });
-
-                    // Show browser push notification if permitted
-                    if ("Notification" in window && Notification.permission === "granted") {
-                        const notification = new Notification("New Booking!", {
-                            body: `${patientName} booked a ${type} consultation for ${format(new Date(scheduledAt), 'PPp')}`,
-                            icon: "/favicon.ico",
+                    if (alerts.length > 0) {
+                        // High vitals alert - Use a more urgent toast
+                        toast.error(`🚨 URGENT: High Vitals!`, {
+                            description: `${patientName} has ${alerts.join(", ")}. Booked for ${format(new Date(scheduledAt), 'PPp')}`,
+                            action: {
+                                label: "Review Now",
+                                onClick: () => navigate("/doctor/schedule"),
+                            },
+                            duration: 15000,
                         });
+                    } else {
+                        // Normal booking
+                        toast.success("New Booking!", {
+                            description: `${patientName} booked a ${type} consultation for ${format(new Date(scheduledAt), 'PPp')}`,
+                            action: {
+                                label: "View Schedule",
+                                onClick: () => navigate("/doctor/schedule"),
+                            },
+                            duration: 10000,
+                        });
+                    }
+
+                    // Show browser push notification
+                    const hasAlerts = alerts.length > 0;
+                    if ("Notification" in window && Notification.permission === "granted") {
+                        const notification = new Notification(
+                            hasAlerts ? "🚨 HIGH VITALS ALERT!" : "New Booking!", 
+                            {
+                                body: hasAlerts 
+                                    ? `${patientName} has concerning vitals: ${alerts.join(", ")}`
+                                    : `${patientName} booked a ${type} consultation for ${format(new Date(scheduledAt), 'PPp')}`,
+                                icon: "/favicon.ico",
+                            }
+                        );
 
                         notification.onclick = () => {
                             window.focus();

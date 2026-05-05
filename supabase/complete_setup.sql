@@ -162,10 +162,10 @@ $$;
 
 -- Get available doctors (bypasses RLS)
 CREATE OR REPLACE FUNCTION public.get_available_doctors()
-RETURNS TABLE (id UUID, full_name TEXT, specialty TEXT, address TEXT)
+RETURNS TABLE (id UUID, full_name TEXT, specialty TEXT, address TEXT, phone TEXT)
 LANGUAGE SQL STABLE SECURITY DEFINER SET search_path = public
 AS $$
-  SELECT p.user_id AS id, p.full_name, p.specialty, p.address
+  SELECT p.user_id AS id, p.full_name, p.specialty, p.address, p.phone
   FROM public.profiles p
   INNER JOIN public.user_roles ur ON ur.user_id = p.user_id
   WHERE ur.role = 'doctor'

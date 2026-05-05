@@ -11,7 +11,7 @@ import { Video, MessageSquare, User, Loader2, Phone, MapPin } from "lucide-react
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { sendConsultationConfirmationEmail } from "@/utils/emailService";
-import { sendWhatsAppNotification } from "@/utils/whatsappService";
+import { sendWhatsAppNotification, sendDoctorVitalsAlert } from "@/utils/whatsappService";
 
 interface BookConsultationDialogProps {
   open: boolean;
@@ -24,6 +24,7 @@ interface Doctor {
   fullName: string;
   specialty: string;
   address?: string;
+  phone?: string;
 }
 
 interface BookedSlot {
@@ -86,7 +87,8 @@ export function BookConsultationDialog({ open, onOpenChange, onSuccess }: BookCo
           id: d.id,
           fullName: d.full_name,
           specialty: d.specialty || '',
-          address: d.address || ''
+          address: d.address || '',
+          phone: d.phone || ''
         })));
         return;
       }
@@ -109,7 +111,7 @@ export function BookConsultationDialog({ open, onOpenChange, onSuccess }: BookCo
         const doctorIds = doctorRoles.map(r => r.user_id);
         const { data: profiles, error: profilesError } = await supabase
           .from('profiles')
-          .select('user_id, full_name, specialty, address')
+          .select('user_id, full_name, specialty, address, phone')
           .in('user_id', doctorIds);
 
         if (profilesError) {
@@ -122,7 +124,8 @@ export function BookConsultationDialog({ open, onOpenChange, onSuccess }: BookCo
             id: p.user_id,
             fullName: p.full_name,
             specialty: p.specialty || '',
-            address: p.address || ''
+            address: p.address || '',
+            phone: p.phone || ''
           })));
         }
       } else {
@@ -312,6 +315,33 @@ export function BookConsultationDialog({ open, onOpenChange, onSuccess }: BookCo
           }
         } catch (waError) {
           console.error("Failed to send WhatsApp notification:", waError);
+        }
+      }
+
+      // High vitals alert for doctor
+      if (doctor && doctor.phone) {
+        const sugarVal = parseFloat(sugarLevel);
+        const isSugarHigh = !isNaN(sugarVal) && sugarVal > 10;
+        
+        let isBPHigh = false;
+        if (bloodPressure.includes('/')) {
+          const [sys, dia] = bloodPressure.split('/').map(v => parseInt(v.trim()));
+          if (!isNaN(sys) && !isNaN(dia)) {
+            isBPHigh = sys >= 140 || dia >= 90;
+          }
+        }
+
+        if (isSugarHigh || isBPHigh) {
+          console.log('[BookConsultation] High vitals detected, alerting doctor...');
+          await sendDoctorVitalsAlert(
+            doctor.phone,
+            doctor.fullName,
+            user.fullName || 'Patient',
+            {
+              bp: isBPHigh ? bloodPressure : undefined,
+              sugar: isSugarHigh ? sugarLevel : undefined
+            }
+          );
         }
       }
 

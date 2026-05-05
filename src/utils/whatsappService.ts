@@ -74,3 +74,25 @@ export const sendWhatsAppNotification = async (data: WhatsAppNotificationData) =
         return null;
     }
 };
+
+/**
+ * Sends a high vitals alert to a doctor
+ */
+export const sendDoctorVitalsAlert = async (doctorPhone: string, doctorName: string, patientName: string, vitals: { bp?: string, sugar?: string }) => {
+    if (!ID_INSTANCE || !API_TOKEN_INSTANCE) return;
+
+    const cleanPhone = doctorPhone.replace(/\D/g, '');
+    const chatId = `${cleanPhone}@c.us`;
+
+    const message = `🚨 *URGENT: High Vitals Alert* 🚨\n\nDr. ${doctorName}, patient *${patientName}* has just booked an appointment with concerning vitals:\n\n${vitals.bp ? `📈 *BP:* ${vitals.bp}\n` : ''}${vitals.sugar ? `🩸 *Sugar:* ${vitals.sugar} mmol/L\n` : ''}\nPlease review this case in your dashboard.`;
+
+    try {
+        await fetch(`${BASE_URL}/waInstance${ID_INSTANCE}/sendMessage/${API_TOKEN_INSTANCE}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chatId, message }),
+        });
+    } catch (error) {
+        console.error('Error sending doctor alert:', error);
+    }
+};
